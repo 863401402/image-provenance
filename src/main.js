@@ -7,13 +7,16 @@ import { convertImage } from './convert.js';
 import { disruptWatermark } from './watermark.js';
 import { analyzeFrequency } from './frequency/index.js';
 import { renderFrequencyPanel } from './frequency/panel.js';
+import { parseMetadata, sniffJumbf, getGenerationHints } from './metadata.js';
+import { renderMetadataPanel } from './panel-metadata.js';
 
 let selectedProfile = 'iphone15pro';
 let currentFile = null;
 let currentBytes = null;
+let currentMeta = null, currentJumbf = null;
 let lastFreqBytes = null, lastFreqResult = null;
 
-// --- Camera grid ---
+// ================= Camera grid (convert tab) =================
 const grid = document.getElementById('cameraGrid');
 Object.entries(CAMERA_PROFILES).forEach(([key, cam]) => {
     const div = document.createElement('div');
@@ -28,10 +31,8 @@ Object.entries(CAMERA_PROFILES).forEach(([key, cam]) => {
     grid.appendChild(div);
 });
 
-// --- Upload handling ---
+// ================= Upload handling =================
 const uploadArea = document.getElementById('uploadArea');
-const uploadInner = uploadArea.querySelector('.upload-inner');
-const uploadOriginalHTML = uploadInner.innerHTML;
 const fileInput = document.getElementById('fileInput');
 uploadArea.addEventListener('click', (e) => {
     if (e.target.closest('input, button, a')) return;
@@ -46,16 +47,63 @@ uploadArea.addEventListener('drop', e => {
 });
 fileInput.addEventListener('change', () => { if (fileInput.files.length) handleFile(fileInput.files[0]); });
 
-// Live intensity label
+document.getElementById('btnChangeFile')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    fileInput.click();
+});
+
+// ================= Intensity slider =================
 const wmRange = document.getElementById('wmIntensity');
 const wmLabel = document.getElementById('wmIntensityVal');
 if (wmRange && wmLabel) wmRange.addEventListener('input', () => { wmLabel.textContent = wmRange.value; });
 
+// ================= Progressive analysis log =================
+// Pins every step to ≥ minMs so the user sees the work happen. Prevents the
+// "instant flash" problem where a 20MB image seems to analyze in 0ms.
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+async function runStep(log, text, fn, minMs = 260, tone = 'done') {
+    const line = document.createElement('div');
+    line.className = 'log-line pending';
+    line.innerHTML = `<span class="log-mark"></span><span class="log-text">${escHtml(text)}<span class="trail"></span></span>`;
+    log.appendChild(line);
+    log.scrollTop = log.scrollHeight;
+    const t0 = performance.now();
+    const result = await fn();
+    const elapsed = performance.now() - t0;
+    if (elapsed < minMs) await sleep(minMs - elapsed);
+    line.classList.remove('pending');
+    line.classList.add('done');
+    if (tone !== 'done') line.classList.add(tone);
+    const detail = typeof result === 'object' && result?.detail;
+    line.querySelector('.log-mark').innerHTML = `<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 8.5 6.5 12 13 4.5"/></svg>`;
+    if (detail) {
+        line.querySelector('.log-text').innerHTML = `${escHtml(text)} <span class="log-detail">${escHtml(detail)}</span>`;
+    } else {
+        line.querySelector('.log-text').textContent = text;
+    }
+    return result?.value !== undefined ? result.value : result;
+}
+
+// ================= Main file handler =================
+const emptyState = document.getElementById('emptyState');
+const resultView = document.getElementById('resultView');
+const previewBlock = document.getElementById('previewBlock');
+const analysisLog = document.getElementById('analysisLog');
+
 async function handleFile(file) {
     currentFile = file;
-    document.getElementById('results').classList.add('hidden');
-    // Reset freq tab / cache so the new file doesn't show previous results.
     lastFreqBytes = null; lastFreqResult = null;
+
+    // Reset UI to reveal result view
+    emptyState.classList.add('hidden');
+    resultView.classList.remove('hidden');
+    previewBlock.classList.remove('hidden');
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === 'detect'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('hidden', p.dataset.panel !== 'detect'));
+
+    // Reset freq panel to pristine
     const freqPanel = document.getElementById('freqPanel');
     if (freqPanel) freqPanel.innerHTML = `
         <button class="btn-primary" id="btnRunFreq">
@@ -66,30 +114,72 @@ async function handleFile(file) {
             提取 65 个频域特征:FFT 幅度谱、径向功率谱、相位一致性、LSB 偏置、小波子带能量……<br>
             在 Web Worker 中执行,不阻塞页面。耗时约 1-3 秒。
         </p>`;
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === 'detect'));
-    document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('hidden', p.dataset.panel !== 'detect'));
-    uploadInner.innerHTML = '<div class="loading"><div class="spinner"></div>正在分析...</div>';
+    document.getElementById('metadataPanel').innerHTML = '';
+    document.getElementById('detectionItems').innerHTML = '';
+    document.getElementById('convertResult').style.display = 'none';
+    document.getElementById('btnConvert').disabled = false;
+
+    // Show preview immediately
+    document.getElementById('previewImg').src = URL.createObjectURL(file);
+    document.getElementById('fileName').textContent = file.name;
+    document.getElementById('fileType').textContent = '解析中…';
+    document.getElementById('fileSize').textContent = formatSize(file.size);
+    document.getElementById('fileDims').textContent = '…';
+    document.getElementById('fileHash').textContent = '…';
+
+    // Hide summary + badge until analysis finishes
+    document.getElementById('headerTitle').textContent = '正在分析';
+    document.getElementById('headerSubtitle').textContent = '';
+    document.getElementById('headerBadge').textContent = '';
+    document.getElementById('headerBadge').className = 'pill';
+
+    analysisLog.innerHTML = '';
+    analysisLog.classList.remove('hidden');
 
     try {
-        const buffer = await file.arrayBuffer();
+        const buffer = await runStep(analysisLog, '读取文件字节', async () => {
+            const b = await file.arrayBuffer();
+            return { value: b, detail: `${formatSize(b.byteLength)}` };
+        }, 180);
         const uint8 = new Uint8Array(buffer);
         currentBytes = uint8;
-        const hashHex = await sha256(buffer);
+
+        const hashHex = await runStep(analysisLog, '计算 SHA-256 指纹', async () => {
+            const h = await sha256(buffer);
+            return { value: h, detail: `${h.slice(0, 16)}…` };
+        }, 240);
+        document.getElementById('fileHash').textContent = hashHex;
 
         const fileType = file.type === 'image/png' ? 'PNG'
             : file.type === 'image/jpeg' ? 'JPEG'
             : file.type === 'image/webp' ? 'WebP' : (file.type || '未知');
-
-        const { detections } = await runAllDetections(uint8);
-        const dims = await getImageDims(file);
-
         document.getElementById('fileType').textContent = fileType;
-        document.getElementById('fileSize').textContent = formatSize(file.size);
-        document.getElementById('fileHash').textContent = hashHex;
-        document.getElementById('previewImg').src = URL.createObjectURL(file);
-        document.getElementById('fileName').textContent = file.name;
-        document.getElementById('fileDims').textContent = dims;
 
+        getImageDims(file).then(d => { document.getElementById('fileDims').textContent = d; });
+
+        await runStep(analysisLog, '扫描 JUMBF / C2PA 签名容器', async () => {
+            currentJumbf = sniffJumbf(uint8);
+            const jumbfDetail = currentJumbf.present
+                ? `发现 ${currentJumbf.indices.length} 个 JUMBF box${currentJumbf.digitalSourceType ? ` · ${currentJumbf.digitalSourceType}` : ''}`
+                : '未发现';
+            return { detail: jumbfDetail };
+        }, 320, currentJumbf?.present ? 'hit' : 'done');
+
+        await runStep(analysisLog, '解析 EXIF / XMP / IPTC / ICC', async () => {
+            currentMeta = await parseMetadata(uint8);
+            const keys = Object.keys(currentMeta).filter(k => !k.startsWith('_'));
+            return { detail: keys.length ? `读取到 ${keys.length} 个字段` : '无元数据' };
+        }, 420);
+
+        const { detections } = await runStep(analysisLog, '匹配 AI 生成标记库', async () => {
+            const res = await runAllDetections(uint8);
+            const hits = res.detections.filter(d => d.hit && d.category !== 'edit').length;
+            return { value: res, detail: hits ? `命中 ${hits} 项` : '全部阴性' };
+        }, 360, 'done');
+
+        await runStep(analysisLog, '字节级水印启发分析', () => sleep(200), 320);
+
+        // Render results
         const aiHits = detections.filter(d => d.hit && d.category !== 'edit');
         const editHits = detections.filter(d => d.hit && d.category === 'edit');
         const anyHit = aiHits.length > 0;
@@ -102,6 +192,10 @@ async function handleFile(file) {
         const hb = document.getElementById('headerBadge');
         hb.textContent = anyHit ? '命中' : '未命中';
         hb.className = 'pill ' + (anyHit ? 'badge-hit' : 'badge-clean');
+
+        // Fade log out, reveal detection items
+        await sleep(350);
+        analysisLog.classList.add('hidden');
 
         const container = document.getElementById('detectionItems');
         container.innerHTML = '';
@@ -127,78 +221,37 @@ async function handleFile(file) {
             container.appendChild(div);
         });
 
-        document.getElementById('convertResult').style.display = 'none';
-        document.getElementById('btnConvert').disabled = false;
-
-        uploadInner.innerHTML = uploadOriginalHTML;
-        document.getElementById('results').classList.remove('hidden');
+        // Render metadata tab lazily on first activation (see tab handler below)
+        document.getElementById('metadataPanel')._pending = true;
     } catch (err) {
-        uploadInner.innerHTML = `<div class="upload-text" style="color:var(--danger)">分析出错: ${escHtml(err.message)}</div>`;
+        const errLine = document.createElement('div');
+        errLine.className = 'log-line done hit';
+        errLine.innerHTML = `<span class="log-mark">✕</span><span class="log-text">分析失败:${escHtml(err.message)}</span>`;
+        analysisLog.appendChild(errLine);
     }
 }
 
-// --- Convert: strip C2PA + inject camera EXIF (task #7) ---
-document.getElementById('btnConvert').addEventListener('click', async () => {
-    if (!currentFile || !currentBytes) return;
-    const btn = document.getElementById('btnConvert');
-    const resultDiv = document.getElementById('convertResult');
-    resultDiv.style.display = 'block';
-    resultDiv.className = 'convert-result';
-    resultDiv.innerHTML = '<div class="loading"><div class="spinner"></div><br>正在处理...</div>';
-    btn.disabled = true;
-
-    try {
-        const profile = CAMERA_PROFILES[selectedProfile];
-        const disrupt = document.getElementById('chkDisruptWatermark')?.checked;
-        const intensity = parseInt(document.getElementById('wmIntensity')?.value || '3', 10);
-        let wmReport = null;
-        const { blob, log } = await convertImage(currentBytes, currentFile.type, profile, {
-            quality: 0.88 + Math.random() * 0.07,
-            disruptWatermark: disrupt ? async (canvas) => {
-                wmReport = await disruptWatermark(canvas, { intensity });
-            } : null,
-        });
-        if (wmReport) {
-            for (const l of wmReport.log) log.push('  · ' + l);
-        }
-
-        const url = URL.createObjectURL(blob);
-        const origName = currentFile.name.replace(/\.[^.]+$/, '') || 'photo';
-        const outName = `${origName}_${profile.Make}_${Date.now().toString(36)}.jpg`;
-
-        resultDiv.innerHTML = `
-            <div style="color:var(--success);font-weight:600;margin-bottom:10px">✅ 转换完成</div>
-            <img src="${url}" alt="转换结果">
-            <div style="font-size:12px;color:var(--text-muted);margin:8px 0;line-height:1.8">
-                ${log.map(l => `• ${escHtml(l)}`).join('<br>')}
-            </div>
-            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
-                <a class="download-btn" href="${url}" download="${escHtml(outName)}">下载 (${formatSize(blob.size)})</a>
-                <button class="btn-secondary" id="btnReanalyze">重新分析</button>
-            </div>
-        `;
-        document.getElementById('btnReanalyze').onclick = async () => {
-            const reFile = new File([blob], outName, { type: 'image/jpeg' });
-            handleFile(reFile);
-        };
-    } catch (err) {
-        resultDiv.className = 'convert-result error';
-        resultDiv.innerHTML = `<div style="color:var(--danger);font-weight:600">转换失败: ${escHtml(err.message)}</div>`;
-    } finally {
-        btn.disabled = false;
-    }
-});
-
-// --- Tab switching (delegated) ---
+// ================= Tab switching =================
 document.addEventListener('click', (ev) => {
     const btn = ev.target.closest && ev.target.closest('.tab-btn');
     if (!btn) return;
     const target = btn.dataset.tab;
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b === btn));
     document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('hidden', p.dataset.panel !== target));
+
+    if (target === 'meta') {
+        const panel = document.getElementById('metadataPanel');
+        if (panel._pending && currentMeta) {
+            renderMetadataPanel(panel, {
+                meta: currentMeta, jumbf: currentJumbf,
+                file: currentFile, dims: document.getElementById('fileDims').textContent,
+            });
+            panel._pending = false;
+        }
+    }
 });
 
-// --- Frequency analysis trigger (event-delegated to survive panel re-renders) ---
+// ================= Frequency trigger =================
 document.addEventListener('click', async (ev) => {
     const btn = ev.target.closest && ev.target.closest('#btnRunFreq');
     if (!btn) return;
@@ -227,7 +280,57 @@ document.addEventListener('click', async (ev) => {
     }
 });
 
-// --- Theme toggle (light/dark) ---
+// ================= Convert =================
+document.getElementById('btnConvert').addEventListener('click', async () => {
+    if (!currentFile || !currentBytes) return;
+    const btn = document.getElementById('btnConvert');
+    const resultDiv = document.getElementById('convertResult');
+    resultDiv.style.display = 'block';
+    resultDiv.className = 'convert-result';
+    resultDiv.innerHTML = '<div class="loading"><div class="spinner"></div>正在处理...</div>';
+    btn.disabled = true;
+
+    try {
+        const profile = CAMERA_PROFILES[selectedProfile];
+        const disrupt = document.getElementById('chkDisruptWatermark')?.checked;
+        const intensity = parseInt(document.getElementById('wmIntensity')?.value || '3', 10);
+        let wmReport = null;
+        const { blob, log } = await convertImage(currentBytes, currentFile.type, profile, {
+            quality: 0.88 + Math.random() * 0.07,
+            disruptWatermark: disrupt ? async (canvas) => {
+                wmReport = await disruptWatermark(canvas, { intensity });
+            } : null,
+        });
+        if (wmReport) for (const l of wmReport.log) log.push('  · ' + l);
+
+        const url = URL.createObjectURL(blob);
+        const origName = currentFile.name.replace(/\.[^.]+$/, '') || 'photo';
+        const outName = `${origName}_${profile.Make}_${Date.now().toString(36)}.jpg`;
+
+        resultDiv.innerHTML = `
+            <div style="color:var(--success);font-weight:600;margin-bottom:10px">转换完成</div>
+            <img src="${url}" alt="转换结果">
+            <div style="font-size:12px;color:var(--text-muted);margin:8px 0;line-height:1.8">
+                ${log.map(l => `• ${escHtml(l)}`).join('<br>')}
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+                <a class="download-btn" href="${url}" download="${escHtml(outName)}">下载 (${formatSize(blob.size)})</a>
+                <button class="btn-secondary" id="btnReanalyze">重新分析</button>
+            </div>
+        `;
+        document.getElementById('btnReanalyze').onclick = async () => {
+            const reFile = new File([blob], outName, { type: 'image/jpeg' });
+            handleFile(reFile);
+        };
+    } catch (err) {
+        resultDiv.className = 'convert-result error';
+        resultDiv.innerHTML = `<div style="color:var(--danger);font-weight:600">转换失败: ${escHtml(err.message)}</div>`;
+    } finally {
+        btn.disabled = false;
+    }
+});
+
+// ================= Theme toggle =================
 const themeToggle = document.getElementById('themeToggle');
 if (themeToggle) {
     themeToggle.addEventListener('click', () => {
