@@ -100,13 +100,17 @@ export async function runAllDetections(uint8) {
         const found = findWithContext(str, m.keywords);
         const threshold = m.hitThreshold || 1;
         const hit = found.length >= threshold;
-        detections.push(card(
-            m.title, hit,
-            hit ? '发现标记' : '未发现',
-            hit ? m.hitDesc(found) : m.missDesc,
-            found.length ? detailOf(found) : null,
-            hit ? 'medium' : null,
-        ));
+        const isEdit = m.category === 'edit';
+        detections.push({
+            ...card(
+                m.title, hit,
+                hit ? (isEdit ? '发现修图痕迹' : '发现标记') : '未发现',
+                hit ? m.hitDesc(found) : m.missDesc,
+                found.length ? detailOf(found) : null,
+                hit ? (isEdit ? 'info' : 'medium') : null,
+            ),
+            category: m.category || 'ai',
+        });
     }
 
     // --- 8. Byte-level invisible watermark heuristic ---

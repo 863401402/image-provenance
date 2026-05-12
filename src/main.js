@@ -1,19 +1,13 @@
 // Entry point — wires upload UI, runs detections, renders results.
-// The convert/watermark-disrupt pipeline is a stub for now (task #7/#8 will fill it in).
 
 import { sha256, formatSize, getImageDims, escHtml } from './utils.js';
 import { runAllDetections } from './detect.js';
-
-const CAMERA_PROFILES = {
-    iphone15pro: { icon: '📱', name: 'iPhone 15 Pro Max', model: 'Apple' },
-    canonr5: { icon: '📷', name: 'Canon EOS R5', model: 'Canon' },
-    sonya7iv: { icon: '📷', name: 'Sony A7 IV', model: 'SONY' },
-    samsungs24: { icon: '📱', name: 'Galaxy S24+', model: 'Samsung' },
-    xiaomi15: { icon: '📱', name: '小米15 Pro', model: 'Xiaomi' },
-};
+import { CAMERA_PROFILES } from './cameras.js';
+import { convertImage } from './convert.js';
 
 let selectedProfile = 'iphone15pro';
 let currentFile = null;
+let currentBytes = null;
 
 // --- Camera grid ---
 const grid = document.getElementById('cameraGrid');
@@ -21,7 +15,7 @@ Object.entries(CAMERA_PROFILES).forEach(([key, cam]) => {
     const div = document.createElement('div');
     div.className = 'camera-option' + (key === selectedProfile ? ' selected' : '');
     div.dataset.key = key;
-    div.innerHTML = `<div class="icon">${cam.icon}</div><div class="name">${escHtml(cam.name)}</div><div class="model">${escHtml(cam.model)}</div>`;
+    div.innerHTML = `<div class="icon">${cam.icon}</div><div class="name">${escHtml(cam.displayName)}</div><div class="model">${escHtml(cam.Make)}</div>`;
     div.onclick = () => {
         document.querySelectorAll('.camera-option').forEach(e => e.classList.remove('selected'));
         div.classList.add('selected');
@@ -51,6 +45,7 @@ async function handleFile(file) {
     try {
         const buffer = await file.arrayBuffer();
         const uint8 = new Uint8Array(buffer);
+        currentBytes = uint8;
         const hashHex = await sha256(buffer);
 
         const fileType = file.type === 'image/png' ? 'PNG (image/png)'
@@ -67,11 +62,15 @@ async function handleFile(file) {
         document.getElementById('fileName').textContent = file.name;
         document.getElementById('fileDims').textContent = dims;
 
-        const anyHit = detections.some(d => d.hit);
-        document.getElementById('headerTitle').textContent = anyHit ? '发现 AI 来源凭证线索' : '未发现明显来源凭证';
+        const aiHits = detections.filter(d => d.hit && d.category !== 'edit');
+        const editHits = detections.filter(d => d.hit && d.category === 'edit');
+        const anyHit = aiHits.length > 0;
+        document.getElementById('headerTitle').textContent = anyHit ? '发现 AI 来源凭证线索' : '未发现明显 AI 来源凭证';
         document.getElementById('headerSubtitle').textContent = anyHit
             ? '这张图可能保留了可验证来源或生成工具相关标记。'
-            : '当前文件字节中没有检出典型 AI 生成标记。';
+            : editHits.length
+                ? '未检出 AI 生成标记,但图片经过修图软件处理。'
+                : '当前文件字节中没有检出典型 AI 生成标记。';
         const hb = document.getElementById('headerBadge');
         hb.textContent = anyHit ? '命中' : '未命中';
         hb.className = 'badge ' + (anyHit ? 'badge-hit' : 'badge-clean');
@@ -81,9 +80,13 @@ async function handleFile(file) {
         detections.forEach(d => {
             const div = document.createElement('div');
             div.className = 'detection-item';
-            const detailHtml = d.detail ? `<div class="detection-item-detail">${escHtml(d.detail)}</div>` : '';
+            const detailHtml = d.detail
+                ? `<details class="detection-item-details"><summary>查看详情</summary><pre class="detection-item-detail">${escHtml(d.detail)}</pre></details>`
+                : '';
             const confHtml = d.confidence ? `<span class="conf conf-${d.confidence}">${
-                d.confidence === 'strong' ? '强证据' : d.confidence === 'medium' ? '中等' : '弱'
+                d.confidence === 'strong' ? '强证据' :
+                d.confidence === 'medium' ? '中等' :
+                d.confidence === 'info' ? '提示' : '弱'
             }</span>` : '';
             div.innerHTML = `
                 <div class="detection-item-header">
@@ -108,22 +111,48 @@ async function handleFile(file) {
     }
 }
 
-// --- Convert stub (real pipeline lands in tasks #7/#8) ---
-document.getElementById('btnConvert').addEventListener('click', () => {
+// --- Convert: strip C2PA + inject camera EXIF (task #7) ---
+document.getElementById('btnConvert').addEventListener('click', async () => {
+    if (!currentFile || !currentBytes) return;
+    const btn = document.getElementById('btnConvert');
     const resultDiv = document.getElementById('convertResult');
-    resultDiv.className = 'convert-result';
-    resultDiv.innerHTML = `
-        <div style="color:#1565c0;font-weight:600;margin-bottom:8px">
-            🚧 转换功能正在重构为纯前端实现(任务 #7/#8)
-        </div>
-        <div style="font-size:13px;color:#666;line-height:1.6">
-            本站点已移除后端依赖。C2PA 剥离 + EXIF 注入 + 水印干扰的纯 Canvas 版本正在开发中,
-            将在下一版本启用。当前版本仅提供检测功能。
-        </div>
-    `;
     resultDiv.style.display = 'block';
-});
+    resultDiv.className = 'convert-result';
+    resultDiv.innerHTML = '<div class="loading"><div class="spinner"></div><br>正在处理...</div>';
+    btn.disabled = true;
 
-// Expose for legacy inline handlers (harmless after full cleanup)
-window.currentFile = () => currentFile;
-window.selectedProfile = () => selectedProfile;
+    try {
+        const profile = CAMERA_PROFILES[selectedProfile];
+        const disrupt = document.getElementById('chkDisruptWatermark')?.checked;
+        const { blob, log } = await convertImage(currentBytes, currentFile.type, profile, {
+            quality: 0.92,
+            // disruptWatermark: disrupt ? (canvas) => applyDisruption(canvas) : null,  // task #8
+        });
+        if (disrupt) log.push('⚠️ 水印扰动功能将在下一版本(任务 #8)启用');
+
+        const url = URL.createObjectURL(blob);
+        const origName = currentFile.name.replace(/\.[^.]+$/, '') || 'photo';
+        const outName = `${origName}_${profile.Make}_${Date.now().toString(36)}.jpg`;
+
+        resultDiv.innerHTML = `
+            <div style="color:#2e7d32;font-weight:600;margin-bottom:10px">✅ 转换完成</div>
+            <img src="${url}" alt="转换结果">
+            <div style="font-size:12px;color:#666;margin:8px 0;line-height:1.8">
+                ${log.map(l => `• ${escHtml(l)}`).join('<br>')}
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+                <a class="download-btn" href="${url}" download="${escHtml(outName)}">⬇️ 下载 (${formatSize(blob.size)})</a>
+                <button class="download-btn" style="background:#555;border:none;cursor:pointer" id="btnReanalyze">🔍 重新分析</button>
+            </div>
+        `;
+        document.getElementById('btnReanalyze').onclick = async () => {
+            const reFile = new File([blob], outName, { type: 'image/jpeg' });
+            handleFile(reFile);
+        };
+    } catch (err) {
+        resultDiv.className = 'convert-result error';
+        resultDiv.innerHTML = `<div style="color:#c0392b;font-weight:600">转换失败: ${escHtml(err.message)}</div>`;
+    } finally {
+        btn.disabled = false;
+    }
+});

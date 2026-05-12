@@ -61,6 +61,15 @@
         .conf-strong { background: #ffe5e5; color: #c0392b; }
         .conf-medium { background: #fff4e5; color: #c87f0a; }
         .conf-weak { background: #f0f0f0; color: #666; }
+        .conf-info { background: #e3f2fd; color: #1565c0; }
+        .detection-item-details { margin-top: 6px; font-size: 12px; }
+        .detection-item-details summary {
+            cursor: pointer; color: #0071e3; user-select: none; padding: 2px 0;
+            list-style: none;
+        }
+        .detection-item-details summary::before { content: '▸ '; font-size: 10px; }
+        .detection-item-details[open] summary::before { content: '▾ '; }
+        .detection-item-details summary:hover { text-decoration: underline; }
         .detection-item-desc { font-size: 13px; color: #86868b; line-height: 1.5; }
         .detection-item-detail {
             margin-top: 8px; background: #f8f9fa; border-radius: 8px; padding: 10px 14px;
