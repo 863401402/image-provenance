@@ -143,11 +143,66 @@
                                 <span class="toggle-slider"></span>
                                 <span class="toggle-text">扰动像素级隐形水印</span>
                             </label>
-                            <p class="panel-hint panel-hint-inline">通过几何微变换 + 噪声 + 重编码降低频域水印可检测性。用于学术鲁棒性评估。</p>
-                            <div class="slider-row">
-                                <span class="slider-label">强度</span>
-                                <input type="range" id="wmIntensity" min="1" max="5" step="1" value="3">
-                                <span class="slider-val" id="wmIntensityVal">3</span>
+                            <p class="panel-hint panel-hint-inline">多种技术组合降低 SynthID / Stable Signature / dwtDct 等水印可检测性。用于学术鲁棒性评估。</p>
+                            <div class="wm-controls" id="wmControls" aria-hidden="true">
+                                <div class="wm-control-row">
+                                    <span class="wm-ctrl-label">预设</span>
+                                    <div class="preset-bar" role="tablist">
+                                        <button type="button" class="preset-btn" data-preset="light">轻量</button>
+                                        <button type="button" class="preset-btn active" data-preset="rec">推荐</button>
+                                        <button type="button" class="preset-btn" data-preset="strong">强力</button>
+                                        <button type="button" class="preset-btn" data-preset="ultra">极限 <span class="preset-warn" title="可能出现细微视觉损伤">·</span></button>
+                                        <button type="button" class="preset-btn" data-preset="custom">自定义</button>
+                                    </div>
+                                </div>
+                                <div class="wm-control-row">
+                                    <span class="wm-ctrl-label">强度</span>
+                                    <input type="range" id="wmIntensity" min="1" max="5" step="1" value="3">
+                                    <span class="slider-val" id="wmIntensityVal">3</span>
+                                </div>
+
+                                <div class="tech-grid" id="techGrid">
+                                    <label class="tech-cell" data-tech="geom">
+                                        <input type="checkbox" data-tech="geom">
+                                        <span class="tech-name">几何微变换</span>
+                                        <span class="tech-desc">裁边 0.3-1.5% 后 resize,破坏几何对齐水印</span>
+                                    </label>
+                                    <label class="tech-cell" data-tech="noise">
+                                        <input type="checkbox" data-tech="noise">
+                                        <span class="tech-name">高斯噪声</span>
+                                        <span class="tech-desc">±2 至 ±6 灰度值,提升噪声地板</span>
+                                    </label>
+                                    <label class="tech-cell" data-tech="unsharp">
+                                        <input type="checkbox" data-tech="unsharp">
+                                        <span class="tech-name">锐化补偿</span>
+                                        <span class="tech-desc">恢复噪声/重采样造成的视觉柔化</span>
+                                    </label>
+                                    <label class="tech-cell" data-tech="doubleJpeg">
+                                        <input type="checkbox" data-tech="doubleJpeg">
+                                        <span class="tech-name">双次 JPEG</span>
+                                        <span class="tech-desc">q=60-72 中间编码,破坏 DCT 域水印</span>
+                                    </label>
+                                    <label class="tech-cell" data-tech="chShift">
+                                        <input type="checkbox" data-tech="chShift">
+                                        <span class="tech-name">通道位移</span>
+                                        <span class="tech-desc">R/B 通道 ±1 像素,破坏跨通道对齐水印</span>
+                                    </label>
+                                    <label class="tech-cell" data-tech="bandNoise">
+                                        <input type="checkbox" data-tech="bandNoise">
+                                        <span class="tech-name">低频带状噪声</span>
+                                        <span class="tech-desc">粗网格平滑噪声,扰动频域中低频</span>
+                                    </label>
+                                    <label class="tech-cell" data-tech="fftPhase">
+                                        <input type="checkbox" data-tech="fftPhase">
+                                        <span class="tech-name">FFT 相位扰动 <span class="tech-badge">慢</span></span>
+                                        <span class="tech-desc">真 2D-FFT 中频相位 ±3-5°,直击 SynthID,~500ms</span>
+                                    </label>
+                                    <label class="tech-cell" data-tech="median">
+                                        <input type="checkbox" data-tech="median">
+                                        <span class="tech-name">中值滤波 3×3 <span class="tech-badge">轻柔化</span></span>
+                                        <span class="tech-desc">破坏 LSB 隐写与单像素噪声水印</span>
+                                    </label>
+                                </div>
                             </div>
                         </div>
 

@@ -4,7 +4,7 @@ import { sha256, formatSize, getImageDims, escHtml } from './utils.js';
 import { runAllDetections } from './detect.js';
 import { CAMERA_PROFILES, CAMERA_GROUPS, GPS_PRESETS } from './cameras.js';
 import { convertImage } from './convert.js';
-import { disruptWatermark } from './watermark.js';
+import { disruptWatermark, PRESETS } from './watermark.js';
 import { analyzeFrequency } from './frequency/index.js';
 import { renderFrequencyPanel } from './frequency/panel.js';
 import { parseMetadata, sniffJumbf, getGenerationHints } from './metadata.js';
@@ -116,6 +116,64 @@ document.getElementById('btnChangeFile')?.addEventListener('click', (e) => {
 const wmRange = document.getElementById('wmIntensity');
 const wmLabel = document.getElementById('wmIntensityVal');
 if (wmRange && wmLabel) wmRange.addEventListener('input', () => { wmLabel.textContent = wmRange.value; });
+
+// ================= Watermark preset / technique selection =================
+let currentPreset = 'rec';   // default matches the old behavior for most cases
+
+function applyPresetToToggles(preset) {
+    const ids = PRESETS[preset]?.techniques || [];
+    document.querySelectorAll('#techGrid input[type="checkbox"]').forEach(cb => {
+        cb.checked = ids.includes(cb.dataset.tech);
+    });
+}
+
+function setPresetUI(preset) {
+    currentPreset = preset;
+    document.querySelectorAll('.preset-btn').forEach(b =>
+        b.classList.toggle('active', b.dataset.preset === preset));
+    const grid = document.getElementById('techGrid');
+    const isCustom = preset === 'custom';
+    grid.classList.toggle('is-locked', !isCustom);
+    grid.classList.toggle('is-open', isCustom);
+    if (!isCustom) applyPresetToToggles(preset);
+}
+
+document.addEventListener('click', (ev) => {
+    const b = ev.target.closest && ev.target.closest('.preset-btn');
+    if (!b) return;
+    setPresetUI(b.dataset.preset);
+});
+// When the user flips a toggle, silently switch to custom if it no longer
+// matches the active preset.
+document.addEventListener('change', (ev) => {
+    if (!ev.target.matches || !ev.target.matches('#techGrid input[type="checkbox"]')) return;
+    if (currentPreset !== 'custom') {
+        // compare current toggle state with preset
+        const preset = PRESETS[currentPreset].techniques;
+        const actual = Array.from(document.querySelectorAll('#techGrid input:checked'))
+            .map(cb => cb.dataset.tech);
+        const same = preset.length === actual.length && preset.every(t => actual.includes(t));
+        if (!same) setPresetUI('custom');
+    }
+});
+
+// Initialize default preset UI on load
+setPresetUI(currentPreset);
+
+// Hide wm-controls when the main toggle is off (default).
+const wmMainToggle = document.getElementById('chkDisruptWatermark');
+const wmControls = document.getElementById('wmControls');
+function syncWmControlsVisibility() {
+    if (!wmControls) return;
+    wmControls.style.display = wmMainToggle?.checked ? '' : 'none';
+}
+wmMainToggle?.addEventListener('change', syncWmControlsVisibility);
+syncWmControlsVisibility();
+
+function resolveTechniques() {
+    return Array.from(document.querySelectorAll('#techGrid input:checked'))
+        .map(cb => cb.dataset.tech);
+}
 
 // ================= Progressive analysis log =================
 // Pins every step to ≥ minMs so the user sees the work happen. Prevents the
@@ -371,13 +429,14 @@ document.getElementById('btnConvert').addEventListener('click', async () => {
         const profile = CAMERA_PROFILES[selectedProfile];
         const disrupt = document.getElementById('chkDisruptWatermark')?.checked;
         const intensity = parseInt(document.getElementById('wmIntensity')?.value || '3', 10);
+        const techniques = resolveTechniques();
         const advanced = resolveAdvanced();
         const quality = resolveQuality();
         let wmReport = null;
         const { blob, log } = await convertImage(currentBytes, currentFile.type, profile, {
             quality, advanced,
             disruptWatermark: disrupt ? async (canvas) => {
-                wmReport = await disruptWatermark(canvas, { intensity });
+                wmReport = await disruptWatermark(canvas, { intensity, techniques });
             } : null,
         });
         if (wmReport) for (const l of wmReport.log) log.push('  · ' + l);
