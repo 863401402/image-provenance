@@ -12,6 +12,16 @@
 
 ---
 
+## 交流 & 友情链接
+
+**📱 微信交流群** · 扫码加入讨论(二维码过期请在 [Issues](https://github.com/863401402/image-provenance/issues) 提醒更新)
+
+<img src="docs/screenshots/wechat-qr.jpg" alt="微信交流群二维码" width="240">
+
+**🔗 友情链接** · [**LINUX DO**](https://linux.do/) — 真正的技术交流社区
+
+---
+
 ## 界面预览
 
 ### 溯源检测(主视图)
@@ -203,17 +213,3 @@ src/
 ## 许可
 
 [MIT](LICENSE)
-
----
-
-## 交流 & 友情链接
-
-### 📱 微信交流群
-
-扫码加入讨论。如果二维码过期,**欢迎在 [Issues](https://github.com/863401402/image-provenance/issues) 提醒我更新**。
-
-<img src="docs/screenshots/wechat-qr.jpg" alt="微信交流群二维码" width="260">
-
-### 🔗 友情链接
-
-- [**LINUX DO**](https://linux.do/) — 真正的技术交流社区。本项目许多灵感与讨论来自这里的朋友。
