@@ -2,7 +2,7 @@
 
 import { sha256, formatSize, getImageDims, escHtml } from './utils.js';
 import { runAllDetections } from './detect.js';
-import { CAMERA_PROFILES } from './cameras.js';
+import { CAMERA_PROFILES, CAMERA_GROUPS, GPS_PRESETS } from './cameras.js';
 import { convertImage } from './convert.js';
 import { disruptWatermark } from './watermark.js';
 import { analyzeFrequency } from './frequency/index.js';
@@ -10,26 +10,86 @@ import { renderFrequencyPanel } from './frequency/panel.js';
 import { parseMetadata, sniffJumbf, getGenerationHints } from './metadata.js';
 import { renderMetadataPanel } from './panel-metadata.js';
 
-let selectedProfile = 'iphone15pro';
+let selectedProfile = 'iphone17promax';
 let currentFile = null;
 let currentBytes = null;
 let currentMeta = null, currentJumbf = null;
 let lastFreqBytes = null, lastFreqResult = null;
 
-// ================= Camera grid (convert tab) =================
-const grid = document.getElementById('cameraGrid');
-Object.entries(CAMERA_PROFILES).forEach(([key, cam]) => {
-    const div = document.createElement('div');
-    div.className = 'camera-option' + (key === selectedProfile ? ' selected' : '');
-    div.dataset.key = key;
-    div.innerHTML = `<div class="icon">${cam.icon}</div><div class="name">${escHtml(cam.displayName)}</div><div class="model">${escHtml(cam.Make)}</div>`;
-    div.onclick = () => {
-        document.querySelectorAll('.camera-option').forEach(e => e.classList.remove('selected'));
-        div.classList.add('selected');
-        selectedProfile = key;
-    };
-    grid.appendChild(div);
+// ================= Camera selector (grouped) =================
+const sel = document.getElementById('cameraSelector');
+const groupHtml = CAMERA_GROUPS.map(g => {
+    const cams = Object.entries(CAMERA_PROFILES).filter(([, c]) => c.group === g.id);
+    const cells = cams.map(([key, cam]) => `
+        <div class="camera-option ${key === selectedProfile ? 'selected' : ''}" data-key="${key}">
+            <div class="icon">${cam.icon}</div>
+            <div class="name">${escHtml(cam.displayName)}</div>
+            <div class="model">${escHtml(cam.Make)}</div>
+        </div>`).join('');
+    return `<div class="camera-group">
+        <div class="camera-group-title">${g.icon} ${escHtml(g.label)} <span class="camera-group-count">${cams.length}</span></div>
+        <div class="camera-grid">${cells}</div>
+    </div>`;
+}).join('');
+sel.innerHTML = groupHtml;
+sel.addEventListener('click', (e) => {
+    const opt = e.target.closest('.camera-option');
+    if (!opt) return;
+    sel.querySelectorAll('.camera-option').forEach(n => n.classList.remove('selected'));
+    opt.classList.add('selected');
+    selectedProfile = opt.dataset.key;
 });
+
+// ================= Advanced panel init =================
+const gpsSel = document.getElementById('advGps');
+if (gpsSel) {
+    gpsSel.innerHTML = Object.entries(GPS_PRESETS).map(([k, v]) =>
+        `<option value="${k}">${escHtml(v.label)}</option>`).join('');
+}
+const dateSel = document.getElementById('advDatePreset');
+const dateCustom = document.getElementById('advDateCustom');
+dateSel?.addEventListener('change', () => {
+    dateCustom.classList.toggle('hidden', dateSel.value !== 'custom');
+});
+const qMode = document.getElementById('advQualityMode');
+const qRange = document.getElementById('advQuality');
+const qVal = document.getElementById('advQualityVal');
+qMode?.addEventListener('change', () => {
+    const custom = qMode.value === 'custom';
+    qRange.classList.toggle('hidden', !custom);
+    qVal.classList.toggle('hidden', !custom);
+});
+qRange?.addEventListener('input', () => { qVal.textContent = qRange.value; });
+
+function resolveAdvanced() {
+    const adv = { orientation: parseInt(document.getElementById('advOrientation').value, 10) || 1 };
+    // date
+    const dp = dateSel.value;
+    if (dp === 'now') {
+        adv.dateTime = new Date();
+    } else if (dp === 'custom') {
+        adv.dateTime = dateCustom.value ? new Date(dateCustom.value) : new Date();
+    } else {
+        const map = { '-1h': 3600e3, '-1d': 864e5, '-7d': 7*864e5, '-30d': 30*864e5, '-365d': 365*864e5 };
+        adv.dateTime = new Date(Date.now() - (map[dp] || 0));
+    }
+    // gps
+    const gp = GPS_PRESETS[gpsSel.value];
+    if (gp && gp.lat != null) adv.gps = { lat: gp.lat, lon: gp.lon };
+    // iso / fnumber / shutter
+    const iso = parseFloat(document.getElementById('advIso').value);
+    const fn = parseFloat(document.getElementById('advFNumber').value);
+    const shutter = parseFloat(document.getElementById('advShutterDen').value);
+    if (!isNaN(iso)) adv.iso = Math.round(iso);
+    if (!isNaN(fn)) adv.fNumber = fn;
+    if (!isNaN(shutter) && shutter >= 1) adv.exposureTime = [1, Math.round(shutter)];
+    return adv;
+}
+
+function resolveQuality() {
+    if (qMode.value === 'custom') return parseInt(qRange.value, 10) / 100;
+    return 0.88 + Math.random() * 0.07;   // 88..95
+}
 
 // ================= Upload handling =================
 const uploadArea = document.getElementById('uploadArea');
@@ -311,9 +371,11 @@ document.getElementById('btnConvert').addEventListener('click', async () => {
         const profile = CAMERA_PROFILES[selectedProfile];
         const disrupt = document.getElementById('chkDisruptWatermark')?.checked;
         const intensity = parseInt(document.getElementById('wmIntensity')?.value || '3', 10);
+        const advanced = resolveAdvanced();
+        const quality = resolveQuality();
         let wmReport = null;
         const { blob, log } = await convertImage(currentBytes, currentFile.type, profile, {
-            quality: 0.88 + Math.random() * 0.07,
+            quality, advanced,
             disruptWatermark: disrupt ? async (canvas) => {
                 wmReport = await disruptWatermark(canvas, { intensity });
             } : null,

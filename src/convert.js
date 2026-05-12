@@ -107,37 +107,63 @@ function formatExifDate(d) {
     return `${d.getFullYear()}:${pad2(d.getMonth()+1)}:${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`;
 }
 
-function buildExifBytes(piexif, profile) {
-    const { TagValues, ImageIFD, ExifIFD, GPSIFD } = piexif;
-    const now = new Date();
+function buildExifBytes(piexif, profile, adv) {
+    const { ImageIFD, ExifIFD, GPSIFD } = piexif;
+    const now = adv?.dateTime ? new Date(adv.dateTime) : new Date();
     const dateStr = formatExifDate(now);
+    const orientation = adv?.orientation || 1;
     const zeroth = {
         [ImageIFD.Make]: profile.Make || 'Unknown',
         [ImageIFD.Model]: profile.Model || 'Unknown',
         [ImageIFD.Software]: profile.Software || '',
         [ImageIFD.DateTime]: dateStr,
-        [ImageIFD.Orientation]: 1,
+        [ImageIFD.Orientation]: orientation,
     };
     const exif = {
         [ExifIFD.DateTimeOriginal]: dateStr,
         [ExifIFD.DateTimeDigitized]: dateStr,
         [ExifIFD.LensModel]: profile.LensModel || '',
-        [ExifIFD.ColorSpace]: 1,                                       // sRGB
+        [ExifIFD.ColorSpace]: 1,
         [ExifIFD.WhiteBalance]: profile.WhiteBalance === 'Auto' ? 0 : 1,
-        [ExifIFD.Flash]: 0x10,                                         // no flash, not detected
+        [ExifIFD.Flash]: 0x10,
     };
-    if (profile.FNumber) exif[ExifIFD.FNumber] = [Math.round(profile.FNumber * 100), 100];
-    if (profile.FocalLength) exif[ExifIFD.FocalLength] = [Math.round(profile.FocalLength * 1000), 1000];
-    if (profile.ISO) exif[ExifIFD.ISOSpeedRatings] = profile.ISO;
-    if (profile.ExposureTime) exif[ExifIFD.ExposureTime] = profile.ExposureTime;
+    const fNumber = adv?.fNumber ?? profile.FNumber;
+    const focalLength = adv?.focalLength ?? profile.FocalLength;
+    const iso = adv?.iso ?? profile.ISO;
+    const exposureTime = adv?.exposureTime ?? profile.ExposureTime;
+    const focal35 = adv?.focal35 ?? profile.FocalLengthIn35mm;
+    if (fNumber) exif[ExifIFD.FNumber] = [Math.round(fNumber * 100), 100];
+    if (focalLength) exif[ExifIFD.FocalLength] = [Math.round(focalLength * 1000), 1000];
+    if (focal35) exif[ExifIFD.FocalLengthIn35mmFilm] = Math.round(focal35);
+    if (iso) exif[ExifIFD.ISOSpeedRatings] = iso;
+    if (exposureTime) exif[ExifIFD.ExposureTime] = exposureTime;
     if (profile.LensMake) exif[ExifIFD.LensMake] = profile.LensMake;
     if (profile.MeteringMode === 'Multi-segment') exif[ExifIFD.MeteringMode] = 5;
     if (profile.ExposureProgram === 'Manual') exif[ExifIFD.ExposureProgram] = 1;
     else if (profile.ExposureProgram === 'Aperture priority') exif[ExifIFD.ExposureProgram] = 3;
-    return piexif.dump({ '0th': zeroth, Exif: exif, GPS: {}, Interop: {}, '1st': {}, thumbnail: null });
+
+    // GPS
+    const gps = {};
+    if (adv?.gps && adv.gps.lat != null && adv.gps.lon != null) {
+        const toDms = deg => {
+            const d = Math.abs(deg);
+            const dd = Math.floor(d);
+            const mm = Math.floor((d - dd) * 60);
+            const ss = Math.round(((d - dd - mm/60) * 3600) * 10000);
+            return [[dd, 1], [mm, 1], [ss, 10000]];
+        };
+        gps[GPSIFD.GPSVersionID] = [2, 3, 0, 0];
+        gps[GPSIFD.GPSLatitudeRef] = adv.gps.lat >= 0 ? 'N' : 'S';
+        gps[GPSIFD.GPSLatitude] = toDms(adv.gps.lat);
+        gps[GPSIFD.GPSLongitudeRef] = adv.gps.lon >= 0 ? 'E' : 'W';
+        gps[GPSIFD.GPSLongitude] = toDms(adv.gps.lon);
+        gps[GPSIFD.GPSDateStamp] = `${now.getFullYear()}:${pad2(now.getMonth()+1)}:${pad2(now.getDate())}`;
+    }
+
+    return piexif.dump({ '0th': zeroth, Exif: exif, GPS: gps, Interop: {}, '1st': {}, thumbnail: null });
 }
 
-async function injectExifIntoJpeg(jpegBlob, profile) {
+async function injectExifIntoJpeg(jpegBlob, profile, adv) {
     const piexif = await loadPiexif();
     const dataUrl = await new Promise((resolve, reject) => {
         const r = new FileReader();
@@ -145,9 +171,8 @@ async function injectExifIntoJpeg(jpegBlob, profile) {
         r.onerror = () => reject(r.error);
         r.readAsDataURL(jpegBlob);
     });
-    const exifStr = buildExifBytes(piexif, profile);
+    const exifStr = buildExifBytes(piexif, profile, adv);
     const withExif = piexif.insert(exifStr, dataUrl);
-    // dataURL → Uint8Array
     const comma = withExif.indexOf(',');
     const bin = atob(withExif.slice(comma + 1));
     const out = new Uint8Array(bin.length);
@@ -186,9 +211,11 @@ export async function convertImage(inputBytes, inputMime, profile, opts = {}) {
 
     const plainJpeg = await canvasToJpegBlob(canvas, quality);
 
-    // 3. Inject fake EXIF
-    const withExif = await injectExifIntoJpeg(plainJpeg, profile);
+    // 3. Inject fake EXIF (advanced overrides honored)
+    const withExif = await injectExifIntoJpeg(plainJpeg, profile, opts.advanced);
     log.push(`注入 EXIF: ${profile.Make} ${profile.Model}`);
+    if (opts.advanced?.dateTime) log.push(`  · 拍摄时间: ${new Date(opts.advanced.dateTime).toLocaleString('zh-CN')}`);
+    if (opts.advanced?.gps?.lat != null) log.push(`  · GPS: ${opts.advanced.gps.lat.toFixed(4)}, ${opts.advanced.gps.lon.toFixed(4)}`);
 
     return { blob: withExif, log };
 }

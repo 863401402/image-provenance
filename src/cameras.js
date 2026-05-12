@@ -1,44 +1,193 @@
 // Camera profiles for the "re-encode as real photo" pipeline.
-// Ported verbatim from server.py CAMERA_PROFILES.
+// Each entry produces plausible EXIF that matches what the device normally
+// writes. Specs drawn from manufacturer pages and publicly shared samples.
+// Updated: 2025-2026 flagship lineup.
 
 export const CAMERA_PROFILES = {
-    iphone15pro: {
-        displayName: 'iPhone 15 Pro Max', icon: '📱',
-        Make: 'Apple', Model: 'iPhone 15 Pro Max', Software: '18.5',
-        LensModel: 'iPhone 15 Pro Max back triple camera 6.765mm f/1.78',
-        FocalLength: 6.765, FNumber: 1.78, ISO: 100,
+    // ===== 手机(主打新机型) =====
+    iphone17promax: {
+        group: 'phone',
+        displayName: 'iPhone 17 Pro Max', icon: '📱',
+        Make: 'Apple', Model: 'iPhone 17 Pro Max', Software: '19.2',
+        LensModel: 'iPhone 17 Pro Max back triple camera 6.86mm f/1.78',
+        FocalLength: 6.86, FocalLengthIn35mm: 24,
+        FNumber: 1.78, ISO: 80,
         ExposureTime: [1, 120], WhiteBalance: 'Auto', ColorSpace: 'sRGB', Flash: 'No Flash',
     },
-    canonr5: {
-        displayName: 'Canon EOS R5', icon: '📷',
-        Make: 'Canon', Model: 'Canon EOS R5', Software: 'Adobe Lightroom Classic',
+    iphone16pro: {
+        group: 'phone',
+        displayName: 'iPhone 16 Pro', icon: '📱',
+        Make: 'Apple', Model: 'iPhone 16 Pro', Software: '18.3.1',
+        LensModel: 'iPhone 16 Pro back triple camera 6.765mm f/1.78',
+        FocalLength: 6.765, FocalLengthIn35mm: 24,
+        FNumber: 1.78, ISO: 100,
+        ExposureTime: [1, 100], WhiteBalance: 'Auto', ColorSpace: 'sRGB', Flash: 'No Flash',
+    },
+    iphone15pro: {
+        group: 'phone',
+        displayName: 'iPhone 15 Pro', icon: '📱',
+        Make: 'Apple', Model: 'iPhone 15 Pro', Software: '17.6.1',
+        LensModel: 'iPhone 15 Pro back triple camera 6.765mm f/1.78',
+        FocalLength: 6.765, FocalLengthIn35mm: 24,
+        FNumber: 1.78, ISO: 125,
+        ExposureTime: [1, 100], WhiteBalance: 'Auto', ColorSpace: 'sRGB', Flash: 'No Flash',
+    },
+    samsungs25u: {
+        group: 'phone',
+        displayName: 'Galaxy S25 Ultra', icon: '📱',
+        Make: 'samsung', Model: 'SM-S938B', Software: 'S938BXXU1AYB4',
+        LensModel: 'Samsung Galaxy S25 Ultra Rear Main Camera',
+        FocalLength: 6.4, FocalLengthIn35mm: 23,
+        FNumber: 1.7, ISO: 80,
+        ExposureTime: [1, 120], WhiteBalance: 'Auto', ColorSpace: 'sRGB', Flash: 'No Flash',
+    },
+    xiaomi15pro: {
+        group: 'phone',
+        displayName: '小米 15 Ultra', icon: '📱',
+        Make: 'Xiaomi', Model: '25010PN30C', Software: 'HyperOS 2',
+        LensModel: 'Leica Summilux 1:1.63-4.1/12-200 ASPH.',
+        FocalLength: 8.7, FocalLengthIn35mm: 23,
+        FNumber: 1.63, ISO: 50,
+        ExposureTime: [1, 200], WhiteBalance: 'Auto', ColorSpace: 'sRGB', Flash: 'No Flash',
+    },
+    pixel9pro: {
+        group: 'phone',
+        displayName: 'Pixel 9 Pro', icon: '📱',
+        Make: 'Google', Model: 'Pixel 9 Pro', Software: 'HDR+ 1.0.607123456',
+        LensModel: 'Pixel 9 Pro back camera 6.9mm f/1.68',
+        FocalLength: 6.9, FocalLengthIn35mm: 25,
+        FNumber: 1.68, ISO: 50,
+        ExposureTime: [1, 300], WhiteBalance: 'Auto', ColorSpace: 'sRGB', Flash: 'No Flash',
+    },
+    huaweip70u: {
+        group: 'phone',
+        displayName: '华为 Pura 70 Ultra', icon: '📱',
+        Make: 'HUAWEI', Model: 'HBP-AL00', Software: 'HBP-AL00 4.3.0.131',
+        LensModel: 'HUAWEI Pura 70 Ultra Rear Main Camera',
+        FocalLength: 7.4, FocalLengthIn35mm: 23,
+        FNumber: 1.6, ISO: 64,
+        ExposureTime: [1, 160], WhiteBalance: 'Auto', ColorSpace: 'sRGB', Flash: 'No Flash',
+    },
+    vivox200p: {
+        group: 'phone',
+        displayName: 'vivo X200 Pro', icon: '📱',
+        Make: 'vivo', Model: 'V2415A', Software: 'OriginOS 5',
+        LensModel: 'ZEISS T* 23mm F1.57',
+        FocalLength: 8.0, FocalLengthIn35mm: 23,
+        FNumber: 1.57, ISO: 50,
+        ExposureTime: [1, 180], WhiteBalance: 'Auto', ColorSpace: 'sRGB', Flash: 'No Flash',
+    },
+
+    // ===== 无反 / 单反 =====
+    canonr5m2: {
+        group: 'dslr',
+        displayName: 'Canon EOS R5 Mark II', icon: '📷',
+        Make: 'Canon', Model: 'Canon EOS R5m2', Software: 'Adobe Lightroom Classic',
         LensModel: 'RF24-70mm F2.8 L IS USM', LensMake: 'Canon',
-        FocalLength: 35, FNumber: 2.8, ISO: 400,
+        FocalLength: 35, FocalLengthIn35mm: 35,
+        FNumber: 2.8, ISO: 400,
         ExposureTime: [1, 250], WhiteBalance: 'Auto', ColorSpace: 'sRGB', Flash: 'No Flash',
         ExposureProgram: 'Aperture priority', MeteringMode: 'Multi-segment',
-        Orientation: 'Horizontal (normal)',
+    },
+    sonya1ii: {
+        group: 'dslr',
+        displayName: 'Sony α1 II', icon: '📷',
+        Make: 'SONY', Model: 'ILCE-1M2', Software: 'Adobe Lightroom Classic',
+        LensModel: 'FE 24-70mm F2.8 GM II', LensMake: 'Sony',
+        FocalLength: 50, FocalLengthIn35mm: 50,
+        FNumber: 2.8, ISO: 200,
+        ExposureTime: [1, 160], WhiteBalance: 'Auto', ColorSpace: 'sRGB', Flash: 'No Flash',
+        ExposureProgram: 'Manual', MeteringMode: 'Multi-segment',
     },
     sonya7iv: {
+        group: 'dslr',
         displayName: 'Sony A7 IV', icon: '📷',
         Make: 'SONY', Model: 'ILCE-7M4', Software: 'Adobe Lightroom Classic',
         LensModel: 'FE 24-70mm F2.8 GM II', LensMake: 'Sony',
-        FocalLength: 50, FNumber: 2.8, ISO: 200,
+        FocalLength: 50, FocalLengthIn35mm: 50,
+        FNumber: 2.8, ISO: 200,
         ExposureTime: [1, 160], WhiteBalance: 'Auto', ColorSpace: 'sRGB', Flash: 'No Flash',
         ExposureProgram: 'Manual', MeteringMode: 'Multi-segment',
-        Orientation: 'Horizontal (normal)',
     },
-    samsungs24: {
-        displayName: 'Galaxy S24+', icon: '📱',
-        Make: 'samsung', Model: 'SM-S9260', Software: 'S9260ZCU4AXK4',
-        LensModel: 'Samsung Galaxy S24+ Rear Camera',
-        FocalLength: 6.3, FNumber: 1.8, ISO: 80,
-        ExposureTime: [1, 100], WhiteBalance: 'Auto', ColorSpace: 'sRGB', Flash: 'No Flash',
-    },
-    xiaomi15: {
-        displayName: '小米15 Pro', icon: '📱',
-        Make: 'Xiaomi', Model: '24129PN74C', Software: 'MIUI Camera',
-        LensModel: 'Xiaomi 15 Pro Rear Main Camera',
-        FocalLength: 7.59, FNumber: 1.44, ISO: 50,
+    nikonz8: {
+        group: 'dslr',
+        displayName: 'Nikon Z8', icon: '📷',
+        Make: 'NIKON CORPORATION', Model: 'NIKON Z 8', Software: 'Ver.2.10',
+        LensModel: 'NIKKOR Z 24-120mm f/4 S', LensMake: 'Nikon',
+        FocalLength: 70, FocalLengthIn35mm: 70,
+        FNumber: 4.0, ISO: 640,
         ExposureTime: [1, 200], WhiteBalance: 'Auto', ColorSpace: 'sRGB', Flash: 'No Flash',
+        ExposureProgram: 'Aperture priority', MeteringMode: 'Multi-segment',
     },
+    fujixt5: {
+        group: 'dslr',
+        displayName: 'Fujifilm X-T5', icon: '📷',
+        Make: 'FUJIFILM', Model: 'X-T5', Software: 'Ver1.10',
+        LensModel: 'XF18-55mmF2.8-4 R LM OIS', LensMake: 'FUJIFILM',
+        FocalLength: 23, FocalLengthIn35mm: 35,
+        FNumber: 2.8, ISO: 320,
+        ExposureTime: [1, 125], WhiteBalance: 'Auto', ColorSpace: 'sRGB', Flash: 'No Flash',
+        ExposureProgram: 'Aperture priority', MeteringMode: 'Multi-segment',
+    },
+
+    // ===== 紧凑 / 胶片感 =====
+    leicaq3: {
+        group: 'compact',
+        displayName: 'Leica Q3', icon: '🎞️',
+        Make: 'LEICA CAMERA AG', Model: 'LEICA Q3', Software: '2.0.2',
+        LensModel: 'SUMMILUX 1:1.7/28 ASPH.', LensMake: 'Leica',
+        FocalLength: 28, FocalLengthIn35mm: 28,
+        FNumber: 2.8, ISO: 200,
+        ExposureTime: [1, 250], WhiteBalance: 'Auto', ColorSpace: 'sRGB', Flash: 'No Flash',
+        ExposureProgram: 'Aperture priority', MeteringMode: 'Multi-segment',
+    },
+    ricohgr3x: {
+        group: 'compact',
+        displayName: 'Ricoh GR IIIx', icon: '🎞️',
+        Make: 'RICOH IMAGING COMPANY, LTD.', Model: 'RICOH GR IIIx', Software: '1.70',
+        LensModel: 'GR LENS 26.1mm F2.8',
+        FocalLength: 26.1, FocalLengthIn35mm: 40,
+        FNumber: 2.8, ISO: 400,
+        ExposureTime: [1, 160], WhiteBalance: 'Auto', ColorSpace: 'sRGB', Flash: 'No Flash',
+        ExposureProgram: 'Aperture priority', MeteringMode: 'Multi-segment',
+    },
+    fujix100vi: {
+        group: 'compact',
+        displayName: 'Fujifilm X100VI', icon: '🎞️',
+        Make: 'FUJIFILM', Model: 'X100VI', Software: 'Ver1.10',
+        LensModel: 'FUJINON 23mm F2', LensMake: 'FUJIFILM',
+        FocalLength: 23, FocalLengthIn35mm: 35,
+        FNumber: 2.8, ISO: 500,
+        ExposureTime: [1, 250], WhiteBalance: 'Auto', ColorSpace: 'sRGB', Flash: 'No Flash',
+        ExposureProgram: 'Aperture priority', MeteringMode: 'Multi-segment',
+    },
+    gopro13: {
+        group: 'compact',
+        displayName: 'GoPro Hero 13', icon: '🎥',
+        Make: 'GoPro', Model: 'HERO13 Black', Software: 'H24.01.01.10.00',
+        LensModel: 'GoPro 2.92mm f/2.5',
+        FocalLength: 2.92, FocalLengthIn35mm: 16,
+        FNumber: 2.5, ISO: 100,
+        ExposureTime: [1, 240], WhiteBalance: 'Auto', ColorSpace: 'sRGB', Flash: 'No Flash',
+    },
+};
+
+export const CAMERA_GROUPS = [
+    { id: 'phone',   label: '手机',         icon: '📱' },
+    { id: 'dslr',    label: '无反 / 单反',  icon: '📷' },
+    { id: 'compact', label: '紧凑 / 胶片感', icon: '🎞️' },
+];
+
+// Safe, non-specific GPS presets — each sits on a well-known landmark
+// so reverse-geocoding returns a city, not someone's home address.
+export const GPS_PRESETS = {
+    none:     { label: '不写入 GPS (推荐)',    lat: null, lon: null },
+    beijing:  { label: '北京 · 故宫午门',       lat: 39.9163, lon: 116.3972 },
+    shanghai: { label: '上海 · 外滩',           lat: 31.2397, lon: 121.4904 },
+    gz:       { label: '广州 · 小蛮腰',         lat: 23.1066, lon: 113.3245 },
+    shenzhen: { label: '深圳 · 平安金融中心',   lat: 22.5370, lon: 114.0579 },
+    chengdu:  { label: '成都 · 春熙路',         lat: 30.6530, lon: 104.0819 },
+    hongkong: { label: '香港 · 维多利亚港',     lat: 22.2940, lon: 114.1694 },
+    tokyo:    { label: '东京 · 涩谷站',         lat: 35.6580, lon: 139.7016 },
+    nyc:      { label: '纽约 · 时代广场',       lat: 40.7580, lon: -73.9855 },
 };

@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git add *)",
+      "Bash(git commit -m 'Expand camera library to 17 current models + advanced conversion options *)",
+      "Bash(git push *)"
+    ]
+  }
+}
