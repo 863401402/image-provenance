@@ -57,7 +57,7 @@ async function handleFile(file) {
             : file.type === 'image/jpeg' ? 'JPEG (image/jpeg)'
             : file.type === 'image/webp' ? 'WebP (image/webp)' : file.type;
 
-        const detections = runAllDetections(uint8);
+        const { detections } = await runAllDetections(uint8);
         const dims = await getImageDims(file);
 
         document.getElementById('fileType').textContent = fileType;
@@ -82,9 +82,12 @@ async function handleFile(file) {
             const div = document.createElement('div');
             div.className = 'detection-item';
             const detailHtml = d.detail ? `<div class="detection-item-detail">${escHtml(d.detail)}</div>` : '';
+            const confHtml = d.confidence ? `<span class="conf conf-${d.confidence}">${
+                d.confidence === 'strong' ? '强证据' : d.confidence === 'medium' ? '中等' : '弱'
+            }</span>` : '';
             div.innerHTML = `
                 <div class="detection-item-header">
-                    <span class="detection-item-title">${escHtml(d.title)}</span>
+                    <span class="detection-item-title">${escHtml(d.title)}${confHtml}</span>
                     <span class="badge ${d.badgeClass}">${escHtml(d.badgeText)}</span>
                 </div>
                 <div class="detection-item-desc">${escHtml(d.desc)}</div>
