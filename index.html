@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI 图片溯源检测</title>
+    <title>AI 图片溯源检测 · 100% 客户端</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -11,6 +11,11 @@
             background: #f5f5f7; min-height: 100vh; color: #1d1d1f; padding: 32px 24px;
         }
         .container { max-width: 1000px; margin: 0 auto; }
+        .privacy-banner {
+            background: #e8f5e9; color: #2e7d32; text-align: center;
+            padding: 10px 16px; border-radius: 10px; margin-bottom: 20px;
+            font-size: 13px; font-weight: 500;
+        }
         .upload-area {
             background: #fff; border: 2px dashed #d2d2d7; border-radius: 16px;
             padding: 48px 32px; text-align: center; cursor: pointer;
@@ -63,12 +68,10 @@
         @keyframes spin { to { transform: rotate(360deg); } }
         .hidden { display: none; }
         .footer { text-align: center; margin-top: 32px; font-size: 12px; color: #b0b0b0; }
+        .footer a { color: #0071e3; text-decoration: none; }
         #fileInput { display: none; }
 
-        /* Convert section */
-        .convert-section {
-            background: #fff; border-radius: 16px; padding: 24px 28px; margin-bottom: 16px;
-        }
+        .convert-section { background: #fff; border-radius: 16px; padding: 24px 28px; margin-bottom: 16px; }
         .convert-section h3 { font-size: 16px; font-weight: 700; margin-bottom: 16px; }
         .convert-section .desc { font-size: 13px; color: #86868b; margin-bottom: 16px; line-height: 1.5; }
         .camera-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; margin-bottom: 16px; }
@@ -98,96 +101,18 @@
             display: inline-block; background: #2e7d32; color: #fff; padding: 10px 24px;
             border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 600; margin-top: 8px;
         }
-        .tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; margin: 2px; }
-        .tag-hit { background: #ffe5e5; color: #c0392b; }
-        .tag-clean { background: #e8f5e9; color: #2e7d32; }
-
-        /* Progress bar styles */
-        .progress-container {
-            margin-top: 16px; display: none;
-        }
-        .progress-bar-wrapper {
-            background: #e8e8ed; border-radius: 8px; overflow: hidden; height: 8px; margin-bottom: 10px;
-        }
-        .progress-bar-fill {
-            height: 100%; border-radius: 8px;
-            background: linear-gradient(90deg, #0071e3, #00a3ff);
-            width: 0%; transition: width 0.4s ease;
-        }
-        .progress-bar-fill.error {
-            background: linear-gradient(90deg, #c0392b, #e74c3c);
-        }
-        .progress-bar-fill.done {
-            background: linear-gradient(90deg, #2e7d32, #4caf50);
-        }
-        .progress-steps {
-            display: flex; flex-direction: column; gap: 6px;
-        }
-        .progress-step {
-            display: flex; align-items: center; gap: 8px;
-            font-size: 13px; color: #86868b; transition: color 0.2s;
-        }
-        .progress-step.active { color: #0071e3; font-weight: 600; }
-        .progress-step.done { color: #2e7d32; }
-        .progress-step.error { color: #c0392b; }
-        .progress-step-icon {
-            width: 20px; text-align: center; font-size: 14px;
-        }
-        .progress-step.active .progress-step-icon { animation: pulse 1s infinite; }
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.4; }
-        }
-        .progress-pct {
-            font-size: 13px; font-weight: 600; color: #0071e3; margin-bottom: 4px;
-        }
     </style>
 </head>
 <body>
-    <!-- Password Gate -->
-    <div id="passwordGate" style="
-        position:fixed;top:0;left:0;width:100%;height:100%;background:#f5f5f7;z-index:9999;
-        display:flex;align-items:center;justify-content:center;
-    ">
-        <div style="background:#fff;border-radius:16px;padding:40px 32px;text-align:center;max-width:360px;width:90%;box-shadow:0 4px 24px rgba(0,0,0,0.08)">
-            <div style="font-size:48px;margin-bottom:12px">🔒</div>
-            <h2 style="font-size:20px;font-weight:700;margin-bottom:8px">AI 图片溯源检测</h2>
-            <p style="font-size:14px;color:#86868b;margin-bottom:20px">请输入访问密码</p>
-            <input type="password" id="pwdInput" placeholder="输入密码" style="
-                width:100%;padding:12px 16px;border:2px solid #d2d2d7;border-radius:10px;
-                font-size:16px;outline:none;text-align:center;margin-bottom:12px;
-            " onkeydown="if(event.key==='Enter')checkPwd()">
-            <button onclick="checkPwd()" style="
-                width:100%;padding:12px;background:#0071e3;color:#fff;border:none;border-radius:10px;
-                font-size:15px;font-weight:600;cursor:pointer;
-            ">进入</button>
-            <div id="pwdError" style="color:#c0392b;font-size:13px;margin-top:8px;display:none">密码错误</div>
-        </div>
-    </div>
-    <script>
-    function checkPwd() {
-        const input = document.getElementById('pwdInput').value;
-        if (input === '807648256') {
-            document.getElementById('passwordGate').style.display = 'none';
-            sessionStorage.setItem('authenticated', '1');
-        } else {
-            document.getElementById('pwdError').style.display = 'block';
-            document.getElementById('pwdInput').value = '';
-            document.getElementById('pwdInput').focus();
-        }
-    }
-    if (sessionStorage.getItem('authenticated') === '1') {
-        document.getElementById('passwordGate').style.display = 'none';
-    } else {
-        setTimeout(() => document.getElementById('pwdInput').focus(), 100);
-    }
-    </script>
-
     <div class="container">
+        <div class="privacy-banner">
+            🔒 100% 客户端 · 图片从不离开浏览器 · 无服务器 · <a href="https://github.com/863401402/image-provenance" style="color:#2e7d32;text-decoration:underline">源码</a>
+        </div>
+
         <div class="upload-area" id="uploadArea">
             <div class="upload-icon">🔍</div>
             <div class="upload-text">
-                拖拽图片到此处，或 <strong>点击选择文件</strong><br>
+                拖拽图片到此处,或 <strong>点击选择文件</strong><br>
                 支持 PNG / JPEG / WebP · 检测 C2PA、OpenAI、Google SynthID、Midjourney 等
             </div>
             <input type="file" id="fileInput" accept="image/png,image/jpeg,image/webp">
@@ -222,583 +147,29 @@
                 </div>
             </div>
 
-            <!-- Convert Section -->
             <div class="convert-section" id="convertSection">
                 <h3>🔄 生成为真实图片</h3>
-                <div class="desc">去除 C2PA/AI 标记，注入真实相机 EXIF 元数据，使图片看起来像真实相机拍摄。纯前端+本地API处理，图片不外传。</div>
+                <div class="desc">去除 C2PA/AI 标记,注入真实相机 EXIF 元数据,使图片看起来像真实相机拍摄。纯前端 Canvas 处理,图片从不上传。</div>
                 <div class="camera-grid" id="cameraGrid"></div>
                 <div style="margin-bottom:16px">
                     <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;color:#333">
                         <input type="checkbox" id="chkDisruptWatermark" style="width:18px;height:18px;accent-color:#0071e3">
-                        <span>🌀 打乱像素级隐形水印（SynthID等）</span>
+                        <span>🌀 扰动像素级隐形水印(SynthID / Stable Signature 等)</span>
                     </label>
                     <div style="font-size:12px;color:#86868b;margin-left:26px;margin-top:4px">
-                        通过轻微几何变换+噪声注入+重编码破坏频域水印，画质损失极小
+                        通过几何微变换 + 噪声 + 重编码降低频域水印可检测性 · 用于学术鲁棒性评估
                     </div>
                 </div>
-                <button class="btn-convert" id="btnConvert" onclick="doConvert()">🔄 去除AI标记并生成真实图片</button>
-                <!-- Progress Bar -->
-                <div class="progress-container" id="progressContainer">
-                    <div class="progress-pct" id="progressPct">0%</div>
-                    <div class="progress-bar-wrapper">
-                        <div class="progress-bar-fill" id="progressBar"></div>
-                    </div>
-                    <div class="progress-steps" id="progressSteps">
-                        <div class="progress-step" data-step="uploading"><span class="progress-step-icon">📤</span>上传图片中...</div>
-                        <div class="progress-step" data-step="c2pa_strip"><span class="progress-step-icon">🧹</span>去除C2PA标记</div>
-                        <div class="progress-step" data-step="meta_strip"><span class="progress-step-icon">🗑️</span>清理元数据</div>
-                        <div class="progress-step" data-step="watermark"><span class="progress-step-icon">🌀</span>打乱隐形水印</div>
-                        <div class="progress-step" data-step="exif_inject"><span class="progress-step-icon">📸</span>注入相机EXIF</div>
-                        <div class="progress-step" data-step="verify"><span class="progress-step-icon">✅</span>验证处理结果</div>
-                        <div class="progress-step" data-step="complete"><span class="progress-step-icon">🎉</span>处理完成</div>
-                    </div>
-                </div>
+                <button class="btn-convert" id="btnConvert">🔄 去除 AI 标记并重编码</button>
                 <div class="convert-result" id="convertResult"></div>
             </div>
         </div>
 
-        <div class="footer">AI 图片溯源检测工具 · 所有检测均在浏览器端完成 · 图片不会上传至外部服务器</div>
+        <div class="footer">
+            AI 图片溯源检测 · 开源 MIT · <a href="https://github.com/863401402/image-provenance">GitHub</a>
+        </div>
     </div>
 
-<script>
-// Camera profiles (frontend display)
-const CAMERA_PROFILES = {
-    iphone15pro: { icon: "📱", name: "iPhone 15 Pro Max", model: "Apple" },
-    canonr5: { icon: "📷", name: "Canon EOS R5", model: "Canon" },
-    sonya7iv: { icon: "📷", name: "Sony A7 IV", model: "SONY" },
-    samsungs24: { icon: "📱", name: "Galaxy S24+", model: "Samsung" },
-    xiaomi15: { icon: "📱", name: "小米15 Pro", model: "Xiaomi" },
-};
-
-let selectedProfile = 'iphone15pro';
-let currentFile = null;
-
-// Build camera grid
-const grid = document.getElementById('cameraGrid');
-Object.entries(CAMERA_PROFILES).forEach(([key, cam]) => {
-    const div = document.createElement('div');
-    div.className = 'camera-option' + (key === selectedProfile ? ' selected' : '');
-    div.dataset.key = key;
-    div.innerHTML = `<div class="icon">${cam.icon}</div><div class="name">${cam.name}</div><div class="model">${cam.model}</div>`;
-    div.onclick = () => {
-        document.querySelectorAll('.camera-option').forEach(e => e.classList.remove('selected'));
-        div.classList.add('selected');
-        selectedProfile = key;
-    };
-    grid.appendChild(div);
-});
-
-// Upload handling
-const uploadArea = document.getElementById('uploadArea');
-const fileInput = document.getElementById('fileInput');
-uploadArea.addEventListener('click', () => fileInput.click());
-uploadArea.addEventListener('dragover', e => { e.preventDefault(); uploadArea.classList.add('dragover'); });
-uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('dragover'));
-uploadArea.addEventListener('drop', e => {
-    e.preventDefault(); uploadArea.classList.remove('dragover');
-    if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
-});
-fileInput.addEventListener('change', () => { if (fileInput.files.length) handleFile(fileInput.files[0]); });
-
-async function handleFile(file) {
-    currentFile = file;
-    document.getElementById('results').classList.add('hidden');
-    uploadArea.innerHTML = '<div class="loading"><div class="spinner"></div><br>正在分析...</div>';
-
-    try {
-        const buffer = await file.arrayBuffer();
-        const uint8 = new Uint8Array(buffer);
-        const hashHex = await sha256(buffer);
-
-        const fileType = file.type === 'image/png' ? 'PNG (image/png)'
-            : file.type === 'image/jpeg' ? 'JPEG (image/jpeg)'
-            : file.type === 'image/webp' ? 'WebP (image/webp)' : file.type;
-
-        const detections = runAllDetections(uint8);
-        const dims = await getImageDims(file);
-
-        // Update UI
-        document.getElementById('fileType').textContent = fileType;
-        document.getElementById('fileSize').textContent = formatSize(file.size);
-        document.getElementById('fileHash').textContent = hashHex;
-        document.getElementById('previewImg').src = URL.createObjectURL(file);
-        document.getElementById('fileName').textContent = file.name;
-        document.getElementById('fileDims').textContent = dims;
-
-        const anyHit = detections.some(d => d.hit);
-        document.getElementById('headerTitle').textContent = anyHit ? '发现 AI 来源凭证线索' : '未发现明显来源凭证';
-        document.getElementById('headerSubtitle').textContent = anyHit
-            ? '这张图可能保留了可验证来源或生成工具相关标记。'
-            : '当前文件字节中没有检出典型 AI 生成标记。';
-        const hb = document.getElementById('headerBadge');
-        hb.textContent = anyHit ? '命中' : '未命中';
-        hb.className = 'badge ' + (anyHit ? 'badge-hit' : 'badge-clean');
-
-        // Render detection items
-        const container = document.getElementById('detectionItems');
-        container.innerHTML = '';
-        detections.forEach(d => {
-            const div = document.createElement('div');
-            div.className = 'detection-item';
-            let detailHtml = '';
-            if (d.detail) {
-                detailHtml = `<div class="detection-item-detail">${escHtml(d.detail)}</div>`;
-            }
-            div.innerHTML = `
-                <div class="detection-item-header">
-                    <span class="detection-item-title">${escHtml(d.title)}</span>
-                    <span class="badge ${d.badgeClass}">${escHtml(d.badgeText)}</span>
-                </div>
-                <div class="detection-item-desc">${escHtml(d.desc)}</div>
-                ${detailHtml}
-            `;
-            container.appendChild(div);
-        });
-
-        // Reset convert section
-        document.getElementById('convertResult').style.display = 'none';
-        document.getElementById('btnConvert').disabled = false;
-
-        uploadArea.innerHTML = `<div class="upload-icon">🔍</div>
-            <div class="upload-text">拖拽图片到此处，或 <strong>点击选择文件</strong><br>
-            支持 PNG / JPEG / WebP · 检测 C2PA、OpenAI、Google SynthID、Midjourney 等</div>`;
-        document.getElementById('results').classList.remove('hidden');
-
-    } catch (err) {
-        uploadArea.innerHTML = `<div class="upload-text" style="color:#c0392b">分析出错: ${escHtml(err.message)}</div>`;
-    }
-}
-
-// === All Detections ===
-function runAllDetections(uint8) {
-    const str = bytesToString(uint8);
-    const detections = [];
-
-    // 1. C2PA
-    const c2paKw = ['C2PA', 'JUMBF', 'caBX', 'c2pa.manifest', 'contentcredentials', 'urn:uuid:', 'jumbf', 'activeManifest', 'claim.v2', 'c2pa_rs', 'c2pa.hash'];
-    const c2paFound = findWithContext(str, c2paKw);
-    detections.push({
-        title: 'C2PA / Content Credentials',
-        hit: c2paFound.length > 0,
-        badgeText: c2paFound.length > 0 ? '发现来源凭证线索' : '未发现明显线索',
-        badgeClass: c2paFound.length > 0 ? 'badge-hit' : 'badge-clean',
-        desc: c2paFound.length > 0 ? `文件中出现 ${c2paFound.map(f=>f.keyword).join('、')} 等结构/字符串。` : '没有在当前文件字节中找到典型 C2PA/JUMBF 线索。',
-        detail: c2paFound.length > 0 ? c2paFound.map(f => `[${f.keyword}] ...${f.context}...`).join('\n') : null,
-    });
-
-    // 2. OpenAI
-    const openaiKw = ['OpenAI', 'ChatGPT', 'chatgpt', 'DALL-E', 'DALL·E', 'dall-e', 'gpt-image', 'gpt_image', 'openai_', 'OPENAI', 'DallE', 'dalle'];
-    const openaiFound = findWithContext(str, openaiKw);
-    detections.push({
-        title: 'OpenAI 相关字符串',
-        hit: openaiFound.length > 0,
-        badgeText: openaiFound.length > 0 ? '发现 OpenAI 线索' : '未发现',
-        badgeClass: openaiFound.length > 0 ? 'badge-hit' : 'badge-clean',
-        desc: openaiFound.length > 0 ? `文件字节中包含 ${openaiFound.map(f=>f.keyword).join('、')} 相关文本。` : '没有发现常见 OpenAI 文本标记。',
-        detail: openaiFound.length > 0 ? openaiFound.map(f => `[${f.keyword}] ...${f.context}...`).join('\n') : null,
-    });
-
-    // 3. Google / SynthID / Nano Banana
-    const googleKw = ['Google', 'SynthID', 'Gemini', 'Imagen', 'Nano Banana', 'nanobanana', 'DeepMind', 'GOOGLE', 'google.com', 'gemini'];
-    const googleFound = findWithContext(str, googleKw);
-    detections.push({
-        title: 'Google / SynthID / Gemini',
-        hit: googleFound.length > 0,
-        badgeText: googleFound.length > 0 ? '发现 Google 线索' : '未发现',
-        badgeClass: googleFound.length > 0 ? 'badge-hit' : 'badge-clean',
-        desc: googleFound.length > 0 ? `发现 ${googleFound.map(f=>f.keyword).join('、')} 相关标记，可能由 Google AI 工具生成。` : '没有发现 Google/SynthID/Gemini 相关标记。',
-        detail: googleFound.length > 0 ? googleFound.map(f => `[${f.keyword}] ...${f.context}...`).join('\n') : null,
-    });
-
-    // 4. Midjourney
-    const mjKw = ['Midjourney', 'midjourney', 'MIDJOURNEY', 'mj-api', 'midj'];
-    const mjFound = findWithContext(str, mjKw);
-    detections.push({
-        title: 'Midjourney',
-        hit: mjFound.length > 0,
-        badgeText: mjFound.length > 0 ? '发现 Midjourney 线索' : '未发现',
-        badgeClass: mjFound.length > 0 ? 'badge-hit' : 'badge-clean',
-        desc: mjFound.length > 0 ? `发现 Midjourney 相关标记。` : '没有发现 Midjourney 相关标记。',
-        detail: mjFound.length > 0 ? mjFound.map(f => `[${f.keyword}] ...${f.context}...`).join('\n') : null,
-    });
-
-    // 5. Stable Diffusion / ComfyUI / Flux
-    const sdKw = ['StableDiffusion', 'stable-diffusion', 'ComfyUI', 'comfyui', 'Flux', 'FLUX', 'Automatic1111', 'A1111', 'InvokeAI', 'Fooocus', 'stable_diffusion', 'diffusion_model'];
-    const sdFound = findWithContext(str, sdKw);
-    detections.push({
-        title: 'Stable Diffusion / ComfyUI / Flux',
-        hit: sdFound.length > 0,
-        badgeText: sdFound.length > 0 ? '发现 SD/Flux 线索' : '未发现',
-        badgeClass: sdFound.length > 0 ? 'badge-hit' : 'badge-clean',
-        desc: sdFound.length > 0 ? `发现 ${sdFound.map(f=>f.keyword).join('、')} 相关标记。` : '没有发现 Stable Diffusion / ComfyUI / Flux 相关标记。',
-        detail: sdFound.length > 0 ? sdFound.map(f => `[${f.keyword}] ...${f.context}...`).join('\n') : null,
-    });
-
-    // 6. Adobe Firefly
-    const adobeKw = ['Adobe', 'Firefly', 'adobe_firefly', 'AdobeFirefly', 'photoshop', 'Photoshop'];
-    const adobeFound = findWithContext(str, adobeKw);
-    detections.push({
-        title: 'Adobe / Firefly / Photoshop',
-        hit: adobeFound.length > 0,
-        badgeText: adobeFound.length > 0 ? '发现 Adobe 线索' : '未发现',
-        badgeClass: adobeFound.length > 0 ? 'badge-hit' : 'badge-clean',
-        desc: adobeFound.length > 0 ? `发现 ${adobeFound.map(f=>f.keyword).join('、')} 相关标记。` : '没有发现 Adobe 相关标记。',
-        detail: adobeFound.length > 0 ? adobeFound.map(f => `[${f.keyword}] ...${f.context}...`).join('\n') : null,
-    });
-
-    // 7. XMP / EXIF Metadata
-    const xmpKw = ['<x:', 'xpacket', '<rdf:', 'xmlns:', 'photoshop:', 'exif:', 'tiff:', 'dc:', 'XMP', 'Exif', 'IPTC', 'ICC_Profile', 'ICC_PROFILE'];
-    const xmpFound = findWithContext(str, xmpKw);
-    detections.push({
-        title: 'XMP / EXIF 元数据',
-        hit: xmpFound.length >= 2,
-        badgeText: xmpFound.length >= 2 ? '发现元数据' : '未发现明显元数据块',
-        badgeClass: xmpFound.length >= 2 ? 'badge-hit' : 'badge-clean',
-        desc: xmpFound.length >= 2 ? `发现 ${xmpFound.map(f=>f.keyword).join('、')} 等元数据标记。` : '没有发现常见 XMP/EXIF 容器。',
-        detail: xmpFound.length > 0 ? xmpFound.map(f => `[${f.keyword}] ...${f.context}...`).join('\n') : null,
-    });
-
-    // 8. PNG text chunks (common for AI metadata in PNG)
-    const pngKw = ['tEXt', 'iTXt', 'zTXt', 'parameters', 'prompt', 'negative_prompt', 'Steps:', 'Sampler:', 'CFG scale', 'Seed:', 'ComfyUI', 'workflow'];
-    const pngFound = findWithContext(str, pngKw);
-    detections.push({
-        title: 'PNG 文本块 / 生成参数',
-        hit: pngFound.length >= 2,
-        badgeText: pngFound.length >= 2 ? '发现生成参数' : '未发现',
-        badgeClass: pngFound.length >= 2 ? 'badge-hit' : 'badge-clean',
-        desc: pngFound.length >= 2 ? `发现 ${pngFound.map(f=>f.keyword).join('、')} 等生成参数标记。` : '没有发现 PNG 文本块中的生成参数。',
-        detail: pngFound.length > 0 ? pngFound.map(f => `[${f.keyword}] ...${f.context}...`).join('\n') : null,
-    });
-
-    // 9. Pixel-level watermark — FFT frequency domain analysis
-    const fftResult = detectWatermarkFFT(uint8);
-    detections.push({
-        title: '像素级隐形水印（频域分析）',
-        hit: fftResult.suspicious,
-        badgeText: fftResult.suspicious ? `疑似水印 (异常度 ${fftResult.score}%)` : '未检测到异常',
-        badgeClass: fftResult.suspicious ? 'badge-hit' : 'badge-clean',
-        desc: fftResult.suspicious
-            ? `频域能量分布偏离自然图像模型，可能存在 SynthID 等隐形水印。`
-            : '频域能量分布符合自然图像特征，未发现明显水印痕迹。',
-        detail: `频谱异常度: ${fftResult.score}%\n高频偏移: ${fftResult.highFreqRatio.toFixed(4)}\n中频峰值: ${fftResult.midFreqPeaks}\nLSB分布偏移: ${fftResult.lsbBias.toFixed(4)}`,
-    });
-
-    return detections;
-}
-
-// === FFT Watermark Detection ===
-function detectWatermarkFFT(uint8) {
-    // Decode image to canvas for pixel access
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    const blob = new Blob([uint8]);
-    const url = URL.createObjectURL(blob);
-    const img = new Image();
-    
-    // We need synchronous result, use a workaround with OffscreenCanvas pattern
-    // For now, analyze raw bytes directly (works on PNG/JPEG pixel-level patterns)
-    
-    // Method 1: LSB (Least Significant Bit) analysis
-    // Watermarks often encode info in LSB of pixel values
-    const lsb0 = {r:0, g:0, b:0};
-    const lsb1 = {r:0, g:0, b:0};
-    let sampleCount = 0;
-    const maxSample = 200000;
-    const step = Math.max(4, Math.floor(uint8.length / maxSample));
-    
-    // Skip headers (first 1000 bytes), sample pixel data
-    for (let i = 1000; i < uint8.length - 2 && sampleCount < maxSample; i += step) {
-        const r = uint8[i], g = uint8[i+1] || 0, b = uint8[i+2] || 0;
-        lsb0.r += r & 1; lsb0.g += g & 1; lsb0.b += b & 1;
-        lsb1.r += (r >> 1) & 1; lsb1.g += (g >> 1) & 1; lsb1.b += (b >> 1) & 1;
-        sampleCount++;
-    }
-    
-    // Expected: LSB ~50% ones. Watermark causes deviation
-    const total = sampleCount * 3;
-    const lsb0Ratio = (lsb0.r + lsb0.g + lsb0.b) / total;
-    const lsb1Ratio = (lsb1.r + lsb1.g + lsb1.b) / total;
-    const lsbBias = Math.abs(lsb0Ratio - 0.5);
-    const lsb1Bias = Math.abs(lsb1Ratio - 0.5);
-    
-    // Method 2: Byte value distribution analysis (chi-square-like)
-    const byteHist = new Uint32Array(256);
-    let byteCount = 0;
-    for (let i = 500; i < uint8.length; i += 3) {
-        byteHist[uint8[i]]++;
-        byteCount++;
-    }
-    const expectedFreq = byteCount / 256;
-    let chiSquare = 0;
-    for (let i = 0; i < 256; i++) {
-        const diff = byteHist[i] - expectedFreq;
-        chiSquare += (diff * diff) / expectedFreq;
-    }
-    // Normalize chi-square (high value = non-uniform = more likely natural image)
-    // But specific patterns in mid-range = watermark signature
-    const chiNorm = Math.min(chiSquare / (byteCount * 0.01), 100);
-    
-    // Method 3: High-frequency byte correlation
-    // Natural images have smooth gradients, watermarks add high-freq noise
-    let highFreqEnergy = 0;
-    let totalVariance = 0;
-    let prevVal = uint8[1000];
-    const corrSample = Math.min(100000, uint8.length - 1001);
-    for (let i = 1001; i < 1001 + corrSample; i++) {
-        const diff = uint8[i] - prevVal;
-        highFreqEnergy += diff * diff;
-        totalVariance += uint8[i] * uint8[i];
-        prevVal = uint8[i];
-    }
-    const highFreqRatio = Math.sqrt(highFreqEnergy) / Math.sqrt(totalVariance + 1);
-    
-    // Method 4: Adjacent pixel correlation in specific bit planes
-    // Watermarks break natural pixel correlation
-    let corrBreaks = 0;
-    const corrStep = Math.max(4, Math.floor(corrSample / 50000));
-    for (let i = 1000; i < uint8.length - 4 && corrBreaks < 50000; i += corrStep) {
-        const a = uint8[i] & 0x03;      // lower 2 bits
-        const b = uint8[i+4] & 0x03;    // lower 2 bits of nearby pixel
-        if (Math.abs(a - b) > 1) corrBreaks++;
-    }
-    const corrBreakRatio = corrBreaks / (corrSample / corrStep);
-    
-    // Method 5: Mid-frequency peak detection
-    // SynthID embeds in mid-frequency bands, creating periodic peaks
-    // Approximate by checking periodicity in byte sequence
-    let midFreqPeaks = 0;
-    const windowSize = 64;
-    for (let offset = 0; offset < windowSize; offset++) {
-        let energy = 0;
-        for (let i = 1000 + offset; i < uint8.length - windowSize; i += windowSize) {
-            energy += uint8[i];
-        }
-        const avgEnergy = energy / ((uint8.length - 1000) / windowSize);
-        // Check if this offset has abnormally consistent energy (watermark signature)
-        if (avgEnergy > 120 && avgEnergy < 136) midFreqPeaks++;
-    }
-    
-    // === Scoring ===
-    let score = 0;
-    
-    // LSB bias (SynthID embeds in LSB)
-    if (lsbBias > 0.03) score += 30;
-    else if (lsbBias > 0.02) score += 20;
-    else if (lsbBias > 0.01) score += 10;
-    
-    // High frequency energy
-    if (highFreqRatio > 0.15) score += 20;
-    else if (highFreqRatio > 0.10) score += 10;
-    
-    // Correlation breaks
-    if (corrBreakRatio > 0.6) score += 20;
-    else if (corrBreakRatio > 0.4) score += 10;
-    
-    // Mid-frequency peaks (periodic pattern = watermark)
-    if (midFreqPeaks > 10) score += 20;
-    else if (midFreqPeaks > 5) score += 10;
-    
-    // LSB1 bias (second bit plane)
-    if (lsb1Bias > 0.02) score += 10;
-    
-    score = Math.min(100, score);
-    
-    return {
-        suspicious: score >= 40,
-        score,
-        highFreqRatio,
-        midFreqPeaks,
-        lsbBias,
-    };
-}
-
-function findWithContext(str, keywords) {
-    const results = [];
-    const seen = new Set();
-    for (const kw of keywords) {
-        if (seen.has(kw.toLowerCase())) continue;
-        const idx = str.indexOf(kw);
-        if (idx !== -1) {
-            seen.add(kw.toLowerCase());
-            const start = Math.max(0, idx - 30);
-            const end = Math.min(str.length, idx + kw.length + 30);
-            let context = str.substring(start, end).replace(/[\x00-\x08\x0e-\x1f]/g, '.');
-            results.push({ keyword: kw, context });
-        }
-    }
-    return results;
-}
-
-// === Convert to Real Photo (plain JSON + simulated progress) ===
-let converting = false;
-async function doConvert() {
-    if (!currentFile || converting) return;
-    converting = true;
-    const btn = document.getElementById('btnConvert');
-    const resultDiv = document.getElementById('convertResult');
-    const progressContainer = document.getElementById('progressContainer');
-    const progressBar = document.getElementById('progressBar');
-    const progressPct = document.getElementById('progressPct');
-    const progressSteps = document.getElementById('progressSteps');
-
-    btn.disabled = true;
-    btn.textContent = '⏳ 处理中...';
-    resultDiv.style.display = 'none';
-    progressContainer.style.display = 'block';
-    progressBar.style.width = '0%';
-    progressBar.className = 'progress-bar-fill';
-    progressPct.textContent = '0%';
-
-    // Reset all steps
-    progressSteps.querySelectorAll('.progress-step').forEach(el => el.className = 'progress-step');
-    progressSteps.querySelector('[data-step="uploading"]').className = 'progress-step active';
-
-    // Simulated progress (advances while server processes)
-    let simProgress = 0;
-    const stepTimers = [
-        { step: 'c2pa_strip', target: 15, delay: 300 },
-        { step: 'meta_strip', target: 35, delay: 800 },
-        { step: 'watermark', target: 60, delay: 1500 },
-        { step: 'exif_inject', target: 80, delay: 2500 },
-        { step: 'verify', target: 90, delay: 3500 },
-    ];
-    const timers = stepTimers.map(s => setTimeout(() => {
-        if (!converting) return;
-        progressBar.style.width = s.target + '%';
-        progressPct.textContent = s.target + '%';
-        const stepEl = progressSteps.querySelector(`[data-step="${s.step}"]`);
-        if (stepEl) {
-            let found = false;
-            progressSteps.querySelectorAll('.progress-step').forEach(el => {
-                if (el === stepEl) { found = true; el.className = 'progress-step active'; }
-                else if (!found) el.className = 'progress-step done';
-            });
-        }
-    }, s.delay));
-
-    const timeout = setTimeout(() => {
-        if (converting) {
-            progressBar.className = 'progress-bar-fill error';
-            resultDiv.className = 'convert-result error';
-            resultDiv.innerHTML = '❌ 处理超时（5分钟），请重试';
-            resultDiv.style.display = 'block';
-            btn.disabled = false;
-            btn.textContent = '🔄 去除AI标记并生成真实图片';
-            converting = false;
-        }
-    }, 300000);
-
-    try {
-        const formData = new FormData();
-        formData.append('image', currentFile);
-        formData.append('profile', selectedProfile);
-        formData.append('disrupt_watermark', document.getElementById('chkDisruptWatermark').checked ? '1' : '0');
-
-        const resp = await fetch('/api/convert', { method: 'POST', body: formData });
-        const data = await resp.json();
-
-        timers.forEach(t => clearTimeout(t));
-        clearTimeout(timeout);
-
-        if (data.success) {
-            // All steps done
-            progressSteps.querySelectorAll('.progress-step').forEach(el => el.className = 'progress-step done');
-            progressBar.style.width = '100%';
-            progressBar.className = 'progress-bar-fill done';
-            progressPct.textContent = '100%';
-
-            const imgSrc = '/api/convert/image/' + data.image_token;
-            resultDiv.className = 'convert-result';
-            resultDiv.innerHTML = `
-                <div style="color:#2e7d32;font-weight:600;margin-bottom:8px">
-                    ✅ 转换成功！已去除AI标记并注入 ${CAMERA_PROFILES[selectedProfile].name} 相机EXIF
-                    ${data.watermark_disrupted ? '<br>🌀 已打乱像素级隐形水印' : ''}
-                </div>
-                <img src="${imgSrc}" alt="转换结果" style="max-width:100%;border-radius:8px">
-                <br>
-                <a class="download-btn" href="${imgSrc}" download="real_photo_${Date.now()}.jpg">📥 下载图片</a>
-                <div style="margin-top:12px;font-size:12px;color:#666">
-                    <strong>处理详情：</strong><br>
-                    • 输出大小: ${(data.output_size / 1024).toFixed(0)} KB<br>
-                    • C2PA标记: ${data.c2pa_removed > 0 ? '已删除 '+data.c2pa_removed+' 个APP11段' : '未发现'}<br>
-                    ${data.watermark_disrupted ? `• 水印打乱: 裁切${data.watermark_details.crop_pct} + 噪声等级${data.watermark_details.noise_level} + JPEG重编码Q${data.watermark_details.jpeg_quality}<br>` : ''}
-                    <strong>注入的元数据：</strong><br>
-                    ${data.metadata && data.metadata[0] ? Object.entries(data.metadata[0])
-                        .filter(([k,v]) => !['SourceFile','ExifToolVersion','FileName','Directory','FileSize','FileModifyDate','FileAccessDate','FileInodeChangeDate','FilePermissions'].includes(k))
-                        .slice(0, 15)
-                        .map(([k,v]) => `${k}: ${v}`).join('<br>') : '—'}
-                </div>
-            `;
-            resultDiv.style.display = 'block';
-        } else {
-            progressBar.className = 'progress-bar-fill error';
-            resultDiv.className = 'convert-result error';
-            resultDiv.innerHTML = `❌ 转换失败: ${escHtml(data.error)}`;
-            resultDiv.style.display = 'block';
-        }
-    } catch (err) {
-        timers.forEach(t => clearTimeout(t));
-        clearTimeout(timeout);
-        progressBar.className = 'progress-bar-fill error';
-        resultDiv.className = 'convert-result error';
-        resultDiv.innerHTML = `❌ 请求失败: ${escHtml(err.message)}`;
-        resultDiv.style.display = 'block';
-    }
-
-    btn.disabled = false;
-    btn.textContent = '🔄 去除AI标记并生成真实图片';
-    converting = false;
-}
-
-// === SHA-256 ===
-async function sha256(buffer) {
-    if (window.crypto && crypto.subtle && crypto.subtle.digest) {
-        try {
-            const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
-            return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
-        } catch(e) {}
-    }
-    return sha256Pure(new Uint8Array(buffer));
-}
-function sha256Pure(msg) {
-    const K=[0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
-    function R(n,x){return(x>>>n)|(x<<(32-n));}
-    const l=msg.length,bitLen=l*8,totalLen=(Math.floor((l+8)/64)+1)*64;
-    const padded=new Uint8Array(totalLen);padded.set(msg);padded[l]=0x80;
-    const dv=new DataView(padded.buffer);
-    dv.setUint32(totalLen-8,Math.floor(bitLen/0x100000000),false);
-    dv.setUint32(totalLen-4,bitLen>>>0,false);
-    let h0=0x6a09e667,h1=0xbb67ae85,h2=0x3c6ef372,h3=0xa54ff53a,h4=0x510e527f,h5=0x9b05688c,h6=0x1f83d9ab,h7=0x5be0cd19;
-    const w=new Uint32Array(64);
-    for(let off=0;off<totalLen;off+=64){
-        for(let i=0;i<16;i++)w[i]=dv.getUint32(off+i*4,false);
-        for(let i=16;i<64;i++){const s0=R(7,w[i-15])^R(18,w[i-15])^(w[i-15]>>>3);const s1=R(17,w[i-2])^R(19,w[i-2])^(w[i-2]>>>10);w[i]=(w[i-16]+s0+w[i-7]+s1)>>>0;}
-        let a=h0,b=h1,c=h2,d=h3,e=h4,f=h5,g=h6,h=h7;
-        for(let i=0;i<64;i++){const S1=R(6,e)^R(11,e)^R(25,e);const ch=(e&f)^(~e&g);const t1=(h+S1+ch+K[i]+w[i])>>>0;const S0=R(2,a)^R(13,a)^R(22,a);const maj=(a&b)^(a&c)^(b&c);const t2=(S0+maj)>>>0;h=g;g=f;f=e;e=(d+t1)>>>0;d=c;c=b;b=a;a=(t1+t2)>>>0;}
-        h0=(h0+a)>>>0;h1=(h1+b)>>>0;h2=(h2+c)>>>0;h3=(h3+d)>>>0;h4=(h4+e)>>>0;h5=(h5+f)>>>0;h6=(h6+g)>>>0;h7=(h7+h)>>>0;
-    }
-    return[h0,h1,h2,h3,h4,h5,h6,h7].map(n=>n.toString(16).padStart(8,'0')).join('');
-}
-
-function bytesToString(uint8) {
-    let str = '';
-    for (let i = 0; i < uint8.length; i += 65536) str += String.fromCharCode.apply(null, uint8.subarray(i, i + 65536));
-    return str;
-}
-function formatSize(bytes) {
-    if (bytes < 1024) return bytes + ' B';
-    if (bytes < 1048576) return (bytes / 1024).toFixed(2) + ' KB';
-    return (bytes / 1048576).toFixed(2) + ' MB';
-}
-function getImageDims(file) {
-    return new Promise(resolve => {
-        const img = new Image();
-        img.onload = () => { resolve(`${img.naturalWidth} x ${img.naturalHeight}px`); URL.revokeObjectURL(img.src); };
-        img.onerror = () => resolve('—');
-        img.src = URL.createObjectURL(file);
-    });
-}
-function escHtml(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
-</script>
+    <script type="module" src="src/main.js"></script>
 </body>
 </html>

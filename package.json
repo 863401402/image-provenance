@@ -1,0 +1,9 @@
+{
+  "name": "image-provenance",
+  "version": "0.2.0-dev",
+  "description": "Client-side AI image provenance detector and watermark tooling",
+  "type": "module",
+  "private": true,
+  "repository": "https://github.com/863401402/image-provenance",
+  "license": "MIT"
+}
