@@ -1,0 +1,213 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 700" font-family="ui-sans-serif, -apple-system, 'PingFang SC', sans-serif">
+  <rect width="1200" height="700" fill="#fafafa"/>
+
+  <!-- Title -->
+  <g transform="translate(80,44)">
+    <text x="0" y="0" font-size="11" fill="#a1a1aa" font-weight="600" letter-spacing="0.08em">转换功能演示 · BEFORE / AFTER</text>
+    <text x="0" y="24" font-size="22" font-weight="600" fill="#0a0a0b">伪装为真实相机照片</text>
+    <text x="0" y="46" font-size="13" fill="#71717a">剥离 AI 标记 → Canvas 重编码 → 注入 EXIF,整个过程 100% 在浏览器里完成。</text>
+  </g>
+
+  <!-- BEFORE card -->
+  <g transform="translate(80,120)">
+    <rect width="360" height="500" rx="16" fill="#ffffff" stroke="#e7e7e9"/>
+
+    <!-- Badge -->
+    <g transform="translate(20,20)">
+      <rect width="68" height="22" rx="11" fill="#fef2f2"/>
+      <text x="34" y="15" text-anchor="middle" font-size="11" font-weight="600" fill="#b91c1c">BEFORE</text>
+    </g>
+    <text x="100" y="36" font-size="13" font-weight="500" fill="#0a0a0b">AI 生成的图</text>
+
+    <!-- Thumbnail -->
+    <g transform="translate(20,56)" clip-path="inset(0 round 10px)">
+      <rect width="320" height="200" fill="#1f2937"/>
+      <rect width="320" height="100" fill="#111827"/>
+      <ellipse cx="180" cy="60" rx="90" ry="30" fill="#4c1d95" opacity="0.6"/>
+      <ellipse cx="200" cy="70" rx="70" ry="20" fill="#7c3aed" opacity="0.5"/>
+      <circle cx="60" cy="30" r="1" fill="#fff"/>
+      <circle cx="120" cy="45" r="1.3" fill="#fff"/>
+      <circle cx="240" cy="38" r="1" fill="#fff"/>
+      <circle cx="80" cy="70" r="1" fill="#fff"/>
+      <polygon points="0,160 100,110 180,150 270,90 320,140 320,200 0,200" fill="#0f172a"/>
+    </g>
+
+    <!-- Metadata extracted -->
+    <g transform="translate(20,272)" font-size="11">
+      <text x="0" y="0" font-size="10" font-weight="700" fill="#a1a1aa" letter-spacing="0.06em">已读取字段</text>
+
+      <g transform="translate(0,14)">
+        <rect width="320" height="32" rx="6" fill="#fef2f2"/>
+        <text x="10" y="13" font-size="10" fill="#b91c1c" font-weight="600">C2PA · JUMBF</text>
+        <text x="10" y="26" font-size="11" fill="#0a0a0b" font-family="ui-monospace, monospace">DigitalSourceType: trainedAlgorithmicMedia</text>
+      </g>
+
+      <g transform="translate(0,54)">
+        <rect width="320" height="32" rx="6" fill="#fef2f2"/>
+        <text x="10" y="13" font-size="10" fill="#b91c1c" font-weight="600">Software</text>
+        <text x="10" y="26" font-size="11" fill="#0a0a0b" font-family="ui-monospace, monospace">Adobe Firefly · Nano Banana 1.5</text>
+      </g>
+
+      <g transform="translate(0,94)">
+        <rect width="320" height="32" rx="6" fill="#fef2f2"/>
+        <text x="10" y="13" font-size="10" fill="#b91c1c" font-weight="600">XMP · CreatorTool</text>
+        <text x="10" y="26" font-size="11" fill="#0a0a0b" font-family="ui-monospace, monospace">google.cloud.ai.generative</text>
+      </g>
+
+      <g transform="translate(0,134)">
+        <rect width="320" height="32" rx="6" fill="#f5f5f5"/>
+        <text x="10" y="13" font-size="10" fill="#71717a" font-weight="600">Make · Model</text>
+        <text x="10" y="26" font-size="11" fill="#71717a" font-family="ui-monospace, monospace">— · —</text>
+      </g>
+
+      <g transform="translate(0,174)">
+        <rect width="320" height="32" rx="6" fill="#f5f5f5"/>
+        <text x="10" y="13" font-size="10" fill="#71717a" font-weight="600">拍摄参数</text>
+        <text x="10" y="26" font-size="11" fill="#71717a" font-family="ui-monospace, monospace">无</text>
+      </g>
+    </g>
+
+    <!-- Verdict -->
+    <g transform="translate(20,480)">
+      <text x="0" y="0" font-size="11" fill="#b91c1c" font-weight="600">🤖 元数据直接声明 AI 生成</text>
+    </g>
+  </g>
+
+  <!-- Pipeline arrow -->
+  <g transform="translate(460,120)">
+    <rect width="280" height="500" rx="16" fill="#ffffff" stroke="#e7e7e9"/>
+
+    <text x="140" y="36" text-anchor="middle" font-size="11" fill="#a1a1aa" font-weight="600" letter-spacing="0.08em">处理流水线</text>
+
+    <g transform="translate(16,56)" font-size="12">
+      <!-- step 1 -->
+      <g transform="translate(0,0)">
+        <circle cx="16" cy="16" r="14" fill="#0a0a0b"/>
+        <text x="16" y="20" text-anchor="middle" font-size="11" font-weight="700" fill="#fff">1</text>
+        <text x="40" y="14" font-weight="600" fill="#0a0a0b">字节级 C2PA 剥离</text>
+        <text x="40" y="28" font-size="11" fill="#71717a">扫描并移除 JPEG APP11 段 / PNG caBX chunk</text>
+      </g>
+      <line x1="16" y1="36" x2="16" y2="62" stroke="#d4d4d8" stroke-width="1.5"/>
+
+      <!-- step 2 -->
+      <g transform="translate(0,66)">
+        <circle cx="16" cy="16" r="14" fill="#0a0a0b"/>
+        <text x="16" y="20" text-anchor="middle" font-size="11" font-weight="700" fill="#fff">2</text>
+        <text x="40" y="14" font-weight="600" fill="#0a0a0b">Canvas 重编码</text>
+        <text x="40" y="28" font-size="11" fill="#71717a">擦除全部 EXIF / XMP / IPTC / ICC 残留</text>
+      </g>
+      <line x1="16" y1="102" x2="16" y2="128" stroke="#d4d4d8" stroke-width="1.5"/>
+
+      <!-- step 3 -->
+      <g transform="translate(0,132)">
+        <circle cx="16" cy="16" r="14" fill="#facc15"/>
+        <text x="16" y="20" text-anchor="middle" font-size="11" font-weight="700" fill="#0a0a0b">3</text>
+        <text x="40" y="14" font-weight="600" fill="#0a0a0b">扰动像素级水印</text>
+        <text x="40" y="28" font-size="11" fill="#71717a">可选 · 8 技术 × 4 预设 · 含 FFT 相位</text>
+      </g>
+      <line x1="16" y1="168" x2="16" y2="194" stroke="#d4d4d8" stroke-width="1.5"/>
+
+      <!-- step 4 -->
+      <g transform="translate(0,198)">
+        <circle cx="16" cy="16" r="14" fill="#0a0a0b"/>
+        <text x="16" y="20" text-anchor="middle" font-size="11" font-weight="700" fill="#fff">4</text>
+        <text x="40" y="14" font-weight="600" fill="#0a0a0b">JPEG 随机质量</text>
+        <text x="40" y="28" font-size="11" fill="#71717a">q = 88-95 随机,避免被统计判别</text>
+      </g>
+      <line x1="16" y1="234" x2="16" y2="260" stroke="#d4d4d8" stroke-width="1.5"/>
+
+      <!-- step 5 -->
+      <g transform="translate(0,264)">
+        <circle cx="16" cy="16" r="14" fill="#0a0a0b"/>
+        <text x="16" y="20" text-anchor="middle" font-size="11" font-weight="700" fill="#fff">5</text>
+        <text x="40" y="14" font-weight="600" fill="#0a0a0b">注入相机 EXIF</text>
+        <text x="40" y="28" font-size="11" fill="#71717a">17 款真实相机 profile · 手机 · 无反 · 胶片感</text>
+      </g>
+      <line x1="16" y1="300" x2="16" y2="326" stroke="#d4d4d8" stroke-width="1.5"/>
+
+      <!-- step 6 -->
+      <g transform="translate(0,330)">
+        <circle cx="16" cy="16" r="14" fill="#0a0a0b"/>
+        <text x="16" y="20" text-anchor="middle" font-size="11" font-weight="700" fill="#fff">6</text>
+        <text x="40" y="14" font-weight="600" fill="#0a0a0b">高级模式 (可选)</text>
+        <text x="40" y="28" font-size="11" fill="#71717a">拍摄时间 · GPS · ISO · 光圈 · 快门</text>
+      </g>
+    </g>
+
+    <!-- arrow to after -->
+    <g transform="translate(240,256)">
+      <path d="M0 0 L24 0 M16 -8 L24 0 L16 8" stroke="#0a0a0b" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+  </g>
+
+  <!-- AFTER card -->
+  <g transform="translate(760,120)">
+    <rect width="360" height="500" rx="16" fill="#ffffff" stroke="#e7e7e9"/>
+
+    <g transform="translate(20,20)">
+      <rect width="68" height="22" rx="11" fill="#f0fdf4"/>
+      <text x="34" y="15" text-anchor="middle" font-size="11" font-weight="600" fill="#15803d">AFTER</text>
+    </g>
+    <text x="100" y="36" font-size="13" font-weight="500" fill="#0a0a0b">伪装成 iPhone 17 Pro Max 拍摄</text>
+
+    <!-- Same image (visually identical) -->
+    <g transform="translate(20,56)" clip-path="inset(0 round 10px)">
+      <rect width="320" height="200" fill="#1f2937"/>
+      <rect width="320" height="100" fill="#111827"/>
+      <ellipse cx="180" cy="60" rx="90" ry="30" fill="#4c1d95" opacity="0.6"/>
+      <ellipse cx="200" cy="70" rx="70" ry="20" fill="#7c3aed" opacity="0.5"/>
+      <circle cx="60" cy="30" r="1" fill="#fff"/>
+      <circle cx="120" cy="45" r="1.3" fill="#fff"/>
+      <circle cx="240" cy="38" r="1" fill="#fff"/>
+      <circle cx="80" cy="70" r="1" fill="#fff"/>
+      <polygon points="0,160 100,110 180,150 270,90 320,140 320,200 0,200" fill="#0f172a"/>
+      <!-- tiny fake grain to represent added noise -->
+      <rect width="320" height="200" fill="#ffffff" opacity="0.015"/>
+    </g>
+
+    <!-- New metadata -->
+    <g transform="translate(20,272)" font-size="11">
+      <text x="0" y="0" font-size="10" font-weight="700" fill="#a1a1aa" letter-spacing="0.06em">新的元数据</text>
+
+      <g transform="translate(0,14)">
+        <rect width="320" height="32" rx="6" fill="#f0fdf4"/>
+        <text x="10" y="13" font-size="10" fill="#15803d" font-weight="600">Make · Model</text>
+        <text x="10" y="26" font-size="11" fill="#0a0a0b" font-family="ui-monospace, monospace">Apple · iPhone 17 Pro Max</text>
+      </g>
+
+      <g transform="translate(0,54)">
+        <rect width="320" height="32" rx="6" fill="#f0fdf4"/>
+        <text x="10" y="13" font-size="10" fill="#15803d" font-weight="600">镜头</text>
+        <text x="10" y="26" font-size="11" fill="#0a0a0b" font-family="ui-monospace, monospace">6.86mm f/1.78 · 24mm eq.</text>
+      </g>
+
+      <g transform="translate(0,94)">
+        <rect width="320" height="32" rx="6" fill="#f0fdf4"/>
+        <text x="10" y="13" font-size="10" fill="#15803d" font-weight="600">拍摄参数</text>
+        <text x="10" y="26" font-size="11" fill="#0a0a0b" font-family="ui-monospace, monospace">ISO 80 · 1/120s · f/1.78</text>
+      </g>
+
+      <g transform="translate(0,134)">
+        <rect width="320" height="32" rx="6" fill="#f0fdf4"/>
+        <text x="10" y="13" font-size="10" fill="#15803d" font-weight="600">时间</text>
+        <text x="10" y="26" font-size="11" fill="#0a0a0b" font-family="ui-monospace, monospace">2026-05-12 14:38:21</text>
+      </g>
+
+      <g transform="translate(0,174)">
+        <rect width="320" height="32" rx="6" fill="#f5f5f5"/>
+        <text x="10" y="13" font-size="10" fill="#71717a" font-weight="600">C2PA · Firefly · SynthID</text>
+        <text x="10" y="26" font-size="11" fill="#71717a" font-family="ui-monospace, monospace">已全部剥离</text>
+      </g>
+    </g>
+
+    <!-- Verdict -->
+    <g transform="translate(20,480)">
+      <text x="0" y="0" font-size="11" fill="#15803d" font-weight="600">📸 强烈指向真实相机拍摄</text>
+    </g>
+  </g>
+
+  <!-- Bottom note -->
+  <text x="600" y="668" text-anchor="middle" font-size="11" fill="#a1a1aa">
+    图片像素肉眼一致 · 元数据已完全重写 · 全程在浏览器里完成
+  </text>
+</svg>

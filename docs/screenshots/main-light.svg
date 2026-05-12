@@ -1,0 +1,174 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 720" font-family="ui-sans-serif, -apple-system, 'PingFang SC', sans-serif">
+  <defs>
+    <linearGradient id="shadow" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0" stop-color="#000" stop-opacity=".04"/>
+      <stop offset="1" stop-color="#000" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- canvas -->
+  <rect width="1200" height="720" fill="#fafafa"/>
+  <rect x="0" y="0" width="1200" height="720" fill="url(#shadow)"/>
+
+  <!-- topbar -->
+  <g transform="translate(120,40)">
+    <circle cx="10" cy="10" r="8" fill="none" stroke="#0a0a0b" stroke-width="1.6"/>
+    <line x1="16" y1="16" x2="22" y2="22" stroke="#0a0a0b" stroke-width="1.6" stroke-linecap="round"/>
+    <text x="36" y="15" font-size="15" font-weight="600" fill="#0a0a0b">Image Provenance</text>
+    <g transform="translate(820,0)">
+      <rect x="0" y="-7" width="36" height="36" rx="10" fill="none" stroke="transparent"/>
+      <path d="M12 -2 L22 -2 L22 8 L12 8 Z M17 -2 L17 8 M12 3 L22 3" stroke="#71717a" stroke-width="1.3" fill="none"/>
+    </g>
+    <g transform="translate(864,0)">
+      <circle cx="17" cy="10" r="4" fill="none" stroke="#0a0a0b" stroke-width="1.6"/>
+      <line x1="17" y1="1" x2="17" y2="3" stroke="#0a0a0b" stroke-width="1.6" stroke-linecap="round"/>
+      <line x1="17" y1="17" x2="17" y2="19" stroke="#0a0a0b" stroke-width="1.6" stroke-linecap="round"/>
+      <line x1="8" y1="10" x2="10" y2="10" stroke="#0a0a0b" stroke-width="1.6" stroke-linecap="round"/>
+      <line x1="24" y1="10" x2="26" y2="10" stroke="#0a0a0b" stroke-width="1.6" stroke-linecap="round"/>
+    </g>
+  </g>
+
+  <!-- Left pane: preview + file-meta -->
+  <g transform="translate(120,100)">
+    <!-- preview card -->
+    <rect x="0" y="0" width="340" height="360" rx="16" fill="#f5f5f5" stroke="#e7e7e9"/>
+
+    <!-- a sample photo rendered as subtle rectangles -->
+    <g clip-path="inset(0 round 14px)">
+      <rect x="10" y="10" width="320" height="300" fill="#d8e1e8"/>
+      <!-- sky -->
+      <rect x="10" y="10" width="320" height="150" fill="#cfd8e0"/>
+      <!-- mountain -->
+      <polygon points="10,200 100,130 180,180 270,110 330,170 330,310 10,310" fill="#9ca6ae"/>
+      <polygon points="10,240 80,190 160,230 220,180 330,220 330,310 10,310" fill="#7c8891"/>
+      <!-- ground -->
+      <rect x="10" y="270" width="320" height="40" fill="#5a6a74"/>
+      <!-- sun -->
+      <circle cx="250" cy="80" r="16" fill="#f3d5a0"/>
+    </g>
+
+    <!-- Change-photo pill -->
+    <g transform="translate(236,18)">
+      <rect width="84" height="24" rx="12" fill="rgba(10,10,11,0.72)"/>
+      <text x="42" y="16" text-anchor="middle" font-size="11" fill="#fff" font-weight="500">换一张</text>
+    </g>
+
+    <!-- File meta card -->
+    <text x="14" y="330" font-size="12.5" font-weight="600" fill="#0a0a0b">landscape-sunset.jpg</text>
+
+    <g transform="translate(0,350)" font-size="10">
+      <text x="14" y="0" fill="#a1a1aa" font-weight="600" letter-spacing="0.06em">类型</text>
+      <text x="14" y="14" fill="#0a0a0b" font-size="12.5" font-weight="500">JPEG</text>
+
+      <text x="120" y="0" fill="#a1a1aa" font-weight="600" letter-spacing="0.06em">大小</text>
+      <text x="120" y="14" fill="#0a0a0b" font-size="12.5" font-weight="500">3.24 MB</text>
+
+      <text x="226" y="0" fill="#a1a1aa" font-weight="600" letter-spacing="0.06em">尺寸</text>
+      <text x="226" y="14" fill="#0a0a0b" font-size="12.5" font-weight="500">4032×3024</text>
+    </g>
+  </g>
+
+  <!-- Right pane: detection result -->
+  <g transform="translate(500,100)">
+    <rect width="580" height="560" rx="16" fill="#ffffff" stroke="#e7e7e9"/>
+
+    <!-- Summary header -->
+    <g transform="translate(28,28)">
+      <text x="0" y="0" font-size="11" fill="#a1a1aa" font-weight="600" letter-spacing="0.08em">分析结果</text>
+      <text x="0" y="22" font-size="20" font-weight="600" fill="#0a0a0b">未发现 AI 来源凭证</text>
+      <text x="0" y="44" font-size="12.5" fill="#71717a">元数据中没有发现 AI 生成相关标记。</text>
+      <g transform="translate(460,0)">
+        <rect x="0" y="-4" width="68" height="26" rx="13" fill="#f0fdf4"/>
+        <text x="34" y="14" text-anchor="middle" font-size="12" font-weight="600" fill="#15803d">未命中</text>
+      </g>
+    </g>
+
+    <!-- divider -->
+    <line x1="28" y1="90" x2="552" y2="90" stroke="#e7e7e9"/>
+
+    <!-- Tab bar -->
+    <g transform="translate(28,108)" font-size="13">
+      <text x="0" y="10" fill="#0a0a0b" font-weight="600">溯源</text>
+      <line x1="-4" y1="20" x2="28" y2="20" stroke="#0a0a0b" stroke-width="2"/>
+      <text x="48" y="10" fill="#71717a">频域</text>
+      <text x="94" y="10" fill="#71717a">元数据</text>
+      <text x="156" y="10" fill="#71717a">转换</text>
+      <line x1="-4" y1="28" x2="524" y2="28" stroke="#e7e7e9"/>
+    </g>
+
+    <!-- Detection items -->
+    <g transform="translate(28,150)" font-size="12.5">
+      <!-- item 1: C2PA -->
+      <g transform="translate(0,0)">
+        <text x="0" y="12" font-weight="600" fill="#0a0a0b">C2PA / Content Credentials</text>
+        <g transform="translate(440,0)">
+          <rect x="0" y="0" width="84" height="22" rx="11" fill="#f0fdf4"/>
+          <text x="42" y="14" text-anchor="middle" font-size="11" font-weight="600" fill="#15803d">未发现</text>
+        </g>
+        <text x="0" y="30" fill="#71717a" font-size="12">没有在字节中找到 C2PA/JUMBF 线索。</text>
+      </g>
+      <line x1="0" y1="52" x2="524" y2="52" stroke="#e7e7e9"/>
+
+      <!-- item 2: metadata -->
+      <g transform="translate(0,66)">
+        <text x="0" y="12" font-weight="600" fill="#0a0a0b">
+          结构化元数据 (EXIF / XMP / IPTC)
+        </text>
+        <g transform="translate(440,0)">
+          <rect x="0" y="0" width="84" height="22" rx="11" fill="#fef2f2"/>
+          <text x="42" y="14" text-anchor="middle" font-size="11" font-weight="600" fill="#b91c1c">已读取</text>
+        </g>
+        <text x="0" y="30" fill="#71717a" font-size="12">读取到 18 个字段 · Apple iPhone 15 Pro · f/1.78 · 1/120s · ISO 80</text>
+      </g>
+      <line x1="0" y1="118" x2="524" y2="118" stroke="#e7e7e9"/>
+
+      <!-- item 3: OpenAI -->
+      <g transform="translate(0,132)">
+        <text x="0" y="12" font-weight="600" fill="#0a0a0b">OpenAI / DALL·E / GPT</text>
+        <g transform="translate(440,0)">
+          <rect x="0" y="0" width="84" height="22" rx="11" fill="#f0fdf4"/>
+          <text x="42" y="14" text-anchor="middle" font-size="11" font-weight="600" fill="#15803d">未发现</text>
+        </g>
+      </g>
+      <line x1="0" y1="166" x2="524" y2="166" stroke="#e7e7e9"/>
+
+      <!-- item 4: Google -->
+      <g transform="translate(0,180)">
+        <text x="0" y="12" font-weight="600" fill="#0a0a0b">Google / SynthID / Gemini</text>
+        <g transform="translate(440,0)">
+          <rect x="0" y="0" width="84" height="22" rx="11" fill="#f0fdf4"/>
+          <text x="42" y="14" text-anchor="middle" font-size="11" font-weight="600" fill="#15803d">未发现</text>
+        </g>
+      </g>
+      <line x1="0" y1="214" x2="524" y2="214" stroke="#e7e7e9"/>
+
+      <!-- item 5: Midjourney -->
+      <g transform="translate(0,228)">
+        <text x="0" y="12" font-weight="600" fill="#0a0a0b">Midjourney</text>
+        <g transform="translate(440,0)">
+          <rect x="0" y="0" width="84" height="22" rx="11" fill="#f0fdf4"/>
+          <text x="42" y="14" text-anchor="middle" font-size="11" font-weight="600" fill="#15803d">未发现</text>
+        </g>
+      </g>
+      <line x1="0" y1="262" x2="524" y2="262" stroke="#e7e7e9"/>
+
+      <!-- item 6: SD -->
+      <g transform="translate(0,276)">
+        <text x="0" y="12" font-weight="600" fill="#0a0a0b">Stable Diffusion / ComfyUI / Flux</text>
+        <g transform="translate(440,0)">
+          <rect x="0" y="0" width="84" height="22" rx="11" fill="#f0fdf4"/>
+          <text x="42" y="14" text-anchor="middle" font-size="11" font-weight="600" fill="#15803d">未发现</text>
+        </g>
+      </g>
+
+      <!-- footer: privacy note -->
+      <g transform="translate(0,340)">
+        <rect x="0" y="0" width="524" height="36" rx="8" fill="#f5f5f5"/>
+        <text x="14" y="22" font-size="12" fill="#71717a">
+          <tspan fill="#0a0a0b" font-weight="600">🔒 100% 客户端</tspan>
+          <tspan> · 图片从不离开浏览器 · 零后端 · 零上传</tspan>
+        </text>
+      </g>
+    </g>
+  </g>
+</svg>
