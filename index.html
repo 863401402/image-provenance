@@ -5,7 +5,51 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
     <meta name="theme-color" content="#0a0a0b" media="(prefers-color-scheme: dark)">
-    <title>Image Provenance · 图片溯源分析</title>
+
+    <!-- SEO -->
+    <title>AI 图片溯源检测 · C2PA / SynthID / EXIF 频域分析 — Image Provenance</title>
+    <meta name="description" content="100% 在浏览器里运行的 AI 图片溯源工具。检测 C2PA / Content Credentials、Google SynthID、Midjourney、Stable Diffusion 等 AI 生成签名;读取 EXIF / XMP 元数据;65 项频域特征启发式分析;支持剥离水印、注入相机 EXIF。零后端,图片不上传。">
+    <meta name="keywords" content="AI 图片检测,AI 生成图识别,C2PA,Content Credentials,SynthID,Midjourney 检测,Stable Diffusion 检测,EXIF 分析,频域分析,图像溯源,水印检测,水印去除,客户端工具">
+    <meta name="author" content="Image Provenance">
+    <link rel="canonical" href="https://863401402.github.io/image-provenance/">
+    <meta name="robots" content="index, follow, max-image-preview:large">
+
+    <!-- Open Graph (微信、Facebook、Telegram 分享卡片) -->
+    <meta property="og:type" content="website">
+    <meta property="og:locale" content="zh_CN">
+    <meta property="og:site_name" content="Image Provenance">
+    <meta property="og:title" content="AI 图片溯源检测 · 浏览器里运行,图片不上传">
+    <meta property="og:description" content="检测 C2PA / SynthID / Midjourney / Stable Diffusion 等 AI 生成签名,读取 EXIF 元数据,65 项频域特征分析,支持元数据清洗与相机 EXIF 伪装。100% 客户端,零后端。">
+    <meta property="og:url" content="https://863401402.github.io/image-provenance/">
+    <meta property="og:image" content="https://863401402.github.io/image-provenance/docs/screenshots/main-light.svg">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="720">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="AI 图片溯源检测 · Image Provenance">
+    <meta name="twitter:description" content="浏览器内 AI 图片溯源 · C2PA / SynthID / EXIF 频域 · 零后端">
+    <meta name="twitter:image" content="https://863401402.github.io/image-provenance/docs/screenshots/main-light.svg">
+
+    <!-- JSON-LD: SoftwareApplication schema for richer Google snippets -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "Image Provenance",
+      "alternateName": "AI 图片溯源检测",
+      "description": "浏览器内运行的 AI 图片溯源工具:检测 C2PA / SynthID / Midjourney / SD 等 AI 签名,读取 EXIF,65 项频域特征启发式分析,支持元数据清洗与相机 EXIF 伪装。",
+      "url": "https://863401402.github.io/image-provenance/",
+      "applicationCategory": "MultimediaApplication",
+      "operatingSystem": "Any (Web Browser)",
+      "browserRequirements": "Requires JavaScript, ES Modules, Web Workers",
+      "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"},
+      "license": "https://opensource.org/licenses/MIT",
+      "inLanguage": "zh-CN",
+      "creator": {"@type": "Organization", "name": "Image Provenance", "url": "https://github.com/863401402/image-provenance"}
+    }
+    </script>
+
     <script>
         // Theme boot — runs inline before paint to avoid flash.
         (() => {
