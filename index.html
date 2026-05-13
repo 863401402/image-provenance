@@ -16,8 +16,9 @@
     <link rel="canonical" href="https://863401402.github.io/image-provenance/">
     <meta name="robots" content="index, follow, max-image-preview:large">
 
-    <!-- Multilingual hints (tells Google this page serves Chinese, and mark English as alternate target) -->
+    <!-- Multilingual hints: same content, two query-param URLs -->
     <link rel="alternate" hreflang="zh-CN" href="https://863401402.github.io/image-provenance/">
+    <link rel="alternate" hreflang="en"    href="https://863401402.github.io/image-provenance/?lang=en">
     <link rel="alternate" hreflang="x-default" href="https://863401402.github.io/image-provenance/">
 
     <!-- Bing crawl hint: we support IndexNow but without a key file yet (add one from bingwebmaster) -->
@@ -135,6 +136,11 @@
                 <span class="brand-name">Image Provenance</span>
             </div>
             <div class="topbar-actions">
+                <button class="lang-toggle" id="langToggle" type="button" aria-label="Switch language">
+                    <span class="lang-opt" data-lang="zh">中</span>
+                    <span class="lang-sep">/</span>
+                    <span class="lang-opt" data-lang="en">EN</span>
+                </button>
                 <a class="icon-link" href="https://github.com/863401402/image-provenance" target="_blank" rel="noopener" aria-label="GitHub">
                     <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M12 .5C5.73.5.67 5.57.67 11.84c0 5.02 3.25 9.28 7.77 10.79.57.1.78-.25.78-.55v-1.93c-3.16.69-3.82-1.52-3.82-1.52-.52-1.31-1.26-1.66-1.26-1.66-1.03-.7.08-.69.08-.69 1.14.08 1.74 1.18 1.74 1.18 1.01 1.74 2.65 1.24 3.3.94.1-.73.4-1.24.72-1.52-2.52-.29-5.17-1.26-5.17-5.62 0-1.24.44-2.25 1.17-3.05-.12-.29-.51-1.44.11-3 0 0 .96-.3 3.13 1.16a10.9 10.9 0 0 1 5.71 0c2.17-1.47 3.13-1.16 3.13-1.16.62 1.56.23 2.71.11 3 .73.8 1.17 1.81 1.17 3.05 0 4.37-2.66 5.33-5.19 5.61.41.35.77 1.05.77 2.11v3.13c0 .3.21.66.79.55 4.51-1.51 7.76-5.77 7.76-10.79C23.33 5.57 18.27.5 12 .5Z"/></svg>
                 </a>
@@ -154,8 +160,8 @@
                             <circle cx="17" cy="20" r="3"/>
                             <path d="M6 34l10-10 8 8 6-6 12 12"/>
                         </svg>
-                        <div class="upload-text">拖拽图片到此处<br>或 <strong>点击选择</strong></div>
-                        <div class="upload-hint">PNG · JPEG · WebP</div>
+                        <div class="upload-text" data-i18n="upload.text.html" data-i18n-html>拖拽图片到此处<br>或 <strong>点击选择</strong></div>
+                        <div class="upload-hint" data-i18n="upload.hint">PNG · JPEG · WebP</div>
                     </div>
                     <input type="file" id="fileInput" accept="image/png,image/jpeg,image/webp">
                 </section>
@@ -165,18 +171,18 @@
                         <img id="previewImg" src="" alt="预览">
                         <button class="preview-change" id="btnChangeFile" type="button" aria-label="换一张">
                             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3.54-7.13"/><polyline points="21 4 21 12 13 12"/></svg>
-                            换一张
+                            <span data-i18n="upload.changeFile">换一张</span>
                         </button>
                     </div>
                     <div class="file-meta-card">
                         <div class="fm-row fm-name" id="fileName"></div>
                         <div class="fm-grid">
-                            <div class="fm-cell"><span class="fm-label">类型</span><span class="fm-value" id="fileType">—</span></div>
-                            <div class="fm-cell"><span class="fm-label">大小</span><span class="fm-value" id="fileSize">—</span></div>
-                            <div class="fm-cell"><span class="fm-label">尺寸</span><span class="fm-value" id="fileDims">—</span></div>
+                            <div class="fm-cell"><span class="fm-label" data-i18n="fm.type">类型</span><span class="fm-value" id="fileType">—</span></div>
+                            <div class="fm-cell"><span class="fm-label" data-i18n="fm.size">大小</span><span class="fm-value" id="fileSize">—</span></div>
+                            <div class="fm-cell"><span class="fm-label" data-i18n="fm.dims">尺寸</span><span class="fm-value" id="fileDims">—</span></div>
                         </div>
                         <div class="fm-hash">
-                            <span class="fm-label">SHA-256</span>
+                            <span class="fm-label" data-i18n="fm.hash">SHA-256</span>
                             <span class="fm-value mono" id="fileHash">—</span>
                         </div>
                     </div>
@@ -185,20 +191,20 @@
 
             <section class="pane pane-right" id="paneRight">
                 <div class="empty-state" id="emptyState">
-                    <h1 class="hero-title">追溯一张图的来路</h1>
-                    <p class="hero-sub">检测 C2PA 凭证、AI 生成签名、频域水印痕迹。</p>
+                    <h1 class="hero-title" data-i18n="hero.title">追溯一张图的来路</h1>
+                    <p class="hero-sub" data-i18n="hero.sub">检测 C2PA 凭证、AI 生成签名、频域水印痕迹。</p>
                     <div class="empty-checks">
-                        <div class="empty-check"><span class="ec-dot"></span>C2PA / Content Credentials</div>
-                        <div class="empty-check"><span class="ec-dot"></span>OpenAI · Google SynthID · Midjourney · SD</div>
-                        <div class="empty-check"><span class="ec-dot"></span>65 项频域特征 + 启发式打分</div>
-                        <div class="empty-check"><span class="ec-dot"></span>元数据清洗 / 相机 EXIF 伪装</div>
+                        <div class="empty-check"><span class="ec-dot"></span><span data-i18n="hero.feature.c2pa">C2PA / Content Credentials</span></div>
+                        <div class="empty-check"><span class="ec-dot"></span><span data-i18n="hero.feature.vendors">OpenAI · Google SynthID · Midjourney · SD</span></div>
+                        <div class="empty-check"><span class="ec-dot"></span><span data-i18n="hero.feature.freq">65 项频域特征 + 启发式打分</span></div>
+                        <div class="empty-check"><span class="ec-dot"></span><span data-i18n="hero.feature.clean">元数据清洗 / 相机 EXIF 伪装</span></div>
                     </div>
                 </div>
 
                 <div class="result-view hidden" id="resultView">
                     <div class="result-head">
                         <div class="result-head-text">
-                            <span class="eyebrow" id="summaryEyebrow">分析结果</span>
+                            <span class="eyebrow" id="summaryEyebrow" data-i18n="result.eyebrow">分析结果</span>
                             <h2 class="summary-title" id="headerTitle"></h2>
                             <p class="summary-sub" id="headerSubtitle"></p>
                         </div>
@@ -206,10 +212,10 @@
                     </div>
 
                     <div class="tab-bar">
-                        <button class="tab-btn active" data-tab="detect">溯源</button>
-                        <button class="tab-btn" data-tab="freq">频域</button>
-                        <button class="tab-btn" data-tab="meta">元数据</button>
-                        <button class="tab-btn" data-tab="convert">转换</button>
+                        <button class="tab-btn active" data-tab="detect" data-i18n="tab.detect">溯源</button>
+                        <button class="tab-btn" data-tab="freq" data-i18n="tab.freq">频域</button>
+                        <button class="tab-btn" data-tab="meta" data-i18n="tab.meta">元数据</button>
+                        <button class="tab-btn" data-tab="convert" data-i18n="tab.convert">转换</button>
                     </div>
 
                     <div class="tab-panel" data-panel="detect">
@@ -219,14 +225,14 @@
                     <div class="tab-panel hidden" data-panel="freq">
                         <div id="freqPanel">
                             <div class="freq-disclaimer">
-                                <span class="freq-disclaimer-tag">非专业分析</span>
-                                <span>仅供参考 · 基于启发式规则,不等同于学术级分类器</span>
+                                <span class="freq-disclaimer-tag" data-i18n="freq.disclaimer.tag">非专业分析</span>
+                                <span data-i18n="freq.disclaimer.text">仅供参考 · 基于启发式规则,不等同于学术级分类器</span>
                             </div>
                             <button class="btn-primary" id="btnRunFreq">
                                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                                运行频域分析
+                                <span data-i18n="freq.runBtn">运行频域分析</span>
                             </button>
-                            <p class="panel-hint">
+                            <p class="panel-hint" data-i18n="freq.panelHint.html" data-i18n-html>
                                 提取 65 个频域特征
                             </p>
                         </div>
@@ -236,29 +242,29 @@
                     </div>
                     <div class="tab-panel hidden" data-panel="convert">
                         <div class="convert-head">
-                            <p class="card-sub">剥离 C2PA / AI 标记,重编码并注入相机 EXIF,让图片伪装成真实相机拍摄。</p>
+                            <p class="card-sub" data-i18n="conv.sub">剥离 C2PA / AI 标记,重编码并注入相机 EXIF,让图片伪装成真实相机拍摄。</p>
                         </div>
                         <div id="cameraSelector"></div>
                         <div class="disrupt-row">
                             <label class="toggle-row">
                                 <input type="checkbox" id="chkDisruptWatermark">
                                 <span class="toggle-slider"></span>
-                                <span class="toggle-text">扰动像素级隐形水印</span>
+                                <span class="toggle-text" data-i18n="conv.wm.toggle">扰动像素级隐形水印</span>
                             </label>
-                            <p class="panel-hint panel-hint-inline">多种技术组合降低 SynthID / Stable Signature / dwtDct 等水印可检测性。</p>
+                            <p class="panel-hint panel-hint-inline" data-i18n="conv.wm.hint">多种技术组合降低 SynthID / Stable Signature / dwtDct 等水印可检测性。</p>
                             <div class="wm-controls" id="wmControls" aria-hidden="true">
                                 <div class="wm-control-row">
-                                    <span class="wm-ctrl-label">预设</span>
+                                    <span class="wm-ctrl-label" data-i18n="conv.preset">预设</span>
                                     <div class="preset-bar" role="tablist">
-                                        <button type="button" class="preset-btn" data-preset="light">轻量</button>
-                                        <button type="button" class="preset-btn active" data-preset="rec">推荐</button>
-                                        <button type="button" class="preset-btn" data-preset="strong">强力</button>
-                                        <button type="button" class="preset-btn" data-preset="ultra">极限 <span class="preset-warn" title="可能出现细微视觉损伤">·</span></button>
-                                        <button type="button" class="preset-btn" data-preset="custom">自定义</button>
+                                        <button type="button" class="preset-btn" data-preset="light" data-i18n="conv.preset.light">轻量</button>
+                                        <button type="button" class="preset-btn active" data-preset="rec" data-i18n="conv.preset.rec">推荐</button>
+                                        <button type="button" class="preset-btn" data-preset="strong" data-i18n="conv.preset.strong">强力</button>
+                                        <button type="button" class="preset-btn" data-preset="ultra"><span data-i18n="conv.preset.ultra">极限</span> <span class="preset-warn" title="可能出现细微视觉损伤">·</span></button>
+                                        <button type="button" class="preset-btn" data-preset="custom" data-i18n="conv.preset.custom">自定义</button>
                                     </div>
                                 </div>
                                 <div class="wm-control-row">
-                                    <span class="wm-ctrl-label">强度</span>
+                                    <span class="wm-ctrl-label" data-i18n="conv.intensity">强度</span>
                                     <input type="range" id="wmIntensity" min="1" max="5" step="1" value="3">
                                     <span class="slider-val" id="wmIntensityVal">3</span>
                                 </div>
@@ -266,108 +272,108 @@
                                 <div class="tech-grid" id="techGrid">
                                     <label class="tech-cell" data-tech="geom">
                                         <input type="checkbox" data-tech="geom">
-                                        <span class="tech-name">几何微变换</span>
-                                        <span class="tech-desc">裁边 0.3-1.5% 后 resize,破坏几何对齐水印</span>
+                                        <span class="tech-name" data-i18n="conv.tech.geom">几何微变换</span>
+                                        <span class="tech-desc" data-i18n="conv.tech.geom.desc">裁边 0.3-1.5% 后 resize,破坏几何对齐水印</span>
                                     </label>
                                     <label class="tech-cell" data-tech="noise">
                                         <input type="checkbox" data-tech="noise">
-                                        <span class="tech-name">高斯噪声</span>
-                                        <span class="tech-desc">±2 至 ±6 灰度值,提升噪声地板</span>
+                                        <span class="tech-name" data-i18n="conv.tech.noise">高斯噪声</span>
+                                        <span class="tech-desc" data-i18n="conv.tech.noise.desc">±2 至 ±6 灰度值,提升噪声地板</span>
                                     </label>
                                     <label class="tech-cell" data-tech="unsharp">
                                         <input type="checkbox" data-tech="unsharp">
-                                        <span class="tech-name">锐化补偿</span>
-                                        <span class="tech-desc">恢复噪声/重采样造成的视觉柔化</span>
+                                        <span class="tech-name" data-i18n="conv.tech.unsharp">锐化补偿</span>
+                                        <span class="tech-desc" data-i18n="conv.tech.unsharp.desc">恢复噪声/重采样造成的视觉柔化</span>
                                     </label>
                                     <label class="tech-cell" data-tech="doubleJpeg">
                                         <input type="checkbox" data-tech="doubleJpeg">
-                                        <span class="tech-name">双次 JPEG</span>
-                                        <span class="tech-desc">q=60-72 中间编码,破坏 DCT 域水印</span>
+                                        <span class="tech-name" data-i18n="conv.tech.doubleJpeg">双次 JPEG</span>
+                                        <span class="tech-desc" data-i18n="conv.tech.doubleJpeg.desc">q=60-72 中间编码,破坏 DCT 域水印</span>
                                     </label>
                                     <label class="tech-cell" data-tech="chShift">
                                         <input type="checkbox" data-tech="chShift">
-                                        <span class="tech-name">通道位移</span>
-                                        <span class="tech-desc">R/B 通道 ±1 像素,破坏跨通道对齐水印</span>
+                                        <span class="tech-name" data-i18n="conv.tech.chShift">通道位移</span>
+                                        <span class="tech-desc" data-i18n="conv.tech.chShift.desc">R/B 通道 ±1 像素,破坏跨通道对齐水印</span>
                                     </label>
                                     <label class="tech-cell" data-tech="bandNoise">
                                         <input type="checkbox" data-tech="bandNoise">
-                                        <span class="tech-name">低频带状噪声</span>
-                                        <span class="tech-desc">粗网格平滑噪声,扰动频域中低频</span>
+                                        <span class="tech-name" data-i18n="conv.tech.bandNoise">低频带状噪声</span>
+                                        <span class="tech-desc" data-i18n="conv.tech.bandNoise.desc">粗网格平滑噪声,扰动频域中低频</span>
                                     </label>
                                     <label class="tech-cell" data-tech="fftPhase">
                                         <input type="checkbox" data-tech="fftPhase">
-                                        <span class="tech-name">FFT 相位扰动 <span class="tech-badge">慢</span></span>
-                                        <span class="tech-desc">真 2D-FFT 中频相位 ±3-5°,直击 SynthID,~500ms</span>
+                                        <span class="tech-name"><span data-i18n="conv.tech.fftPhase">FFT 相位扰动</span> <span class="tech-badge" data-i18n="conv.tech.badge.slow">慢</span></span>
+                                        <span class="tech-desc" data-i18n="conv.tech.fftPhase.desc">真 2D-FFT 中频相位 ±3-5°,直击 SynthID,~500ms</span>
                                     </label>
                                     <label class="tech-cell" data-tech="median">
                                         <input type="checkbox" data-tech="median">
-                                        <span class="tech-name">中值滤波 3×3 <span class="tech-badge">轻柔化</span></span>
-                                        <span class="tech-desc">破坏 LSB 隐写与单像素噪声水印</span>
+                                        <span class="tech-name"><span data-i18n="conv.tech.median">中值滤波 3×3</span> <span class="tech-badge" data-i18n="conv.tech.badge.soft">轻柔化</span></span>
+                                        <span class="tech-desc" data-i18n="conv.tech.median.desc">破坏 LSB 隐写与单像素噪声水印</span>
                                     </label>
                                 </div>
                             </div>
                         </div>
 
                         <details class="advanced-panel" id="advancedPanel">
-                            <summary><span class="advanced-chev">▸</span> 高级选项 </summary>
+                            <summary><span class="advanced-chev">▸</span> <span data-i18n="conv.adv.summary">高级选项</span> <span class="advanced-note" data-i18n="conv.adv.note"></span></summary>
                             <div class="advanced-body">
                                 <div class="adv-field">
-                                    <label class="adv-label">拍摄时间</label>
+                                    <label class="adv-label" data-i18n="conv.adv.date">拍摄时间</label>
                                     <div class="adv-control">
                                         <select id="advDatePreset">
-                                            <option value="now">现在 (推荐)</option>
-                                            <option value="-1h">1 小时前</option>
-                                            <option value="-1d">1 天前</option>
-                                            <option value="-7d">1 周前</option>
-                                            <option value="-30d">1 个月前</option>
-                                            <option value="-365d">1 年前</option>
-                                            <option value="custom">自定义…</option>
+                                            <option value="now" data-i18n="conv.adv.date.now">现在 (推荐)</option>
+                                            <option value="-1h" data-i18n="conv.adv.date.1h">1 小时前</option>
+                                            <option value="-1d" data-i18n="conv.adv.date.1d">1 天前</option>
+                                            <option value="-7d" data-i18n="conv.adv.date.7d">1 周前</option>
+                                            <option value="-30d" data-i18n="conv.adv.date.30d">1 个月前</option>
+                                            <option value="-365d" data-i18n="conv.adv.date.365d">1 年前</option>
+                                            <option value="custom" data-i18n="conv.adv.date.custom">自定义…</option>
                                         </select>
                                         <input type="datetime-local" id="advDateCustom" class="hidden">
                                     </div>
                                 </div>
                                 <div class="adv-field">
-                                    <label class="adv-label">地理位置</label>
+                                    <label class="adv-label" data-i18n="conv.adv.gps">地理位置</label>
                                     <select id="advGps"></select>
                                 </div>
                                 <div class="adv-field">
-                                    <label class="adv-label">方向</label>
+                                    <label class="adv-label" data-i18n="conv.adv.orient">方向</label>
                                     <select id="advOrientation">
-                                        <option value="1">1 · 正常</option>
-                                        <option value="6">6 · 顺时针 90°</option>
-                                        <option value="8">8 · 逆时针 90°</option>
-                                        <option value="3">3 · 180°</option>
+                                        <option value="1" data-i18n="conv.adv.orient.1">1 · 正常</option>
+                                        <option value="6" data-i18n="conv.adv.orient.6">6 · 顺时针 90°</option>
+                                        <option value="8" data-i18n="conv.adv.orient.8">8 · 逆时针 90°</option>
+                                        <option value="3" data-i18n="conv.adv.orient.3">3 · 180°</option>
                                     </select>
                                 </div>
                                 <div class="adv-field">
-                                    <label class="adv-label">JPEG 质量</label>
+                                    <label class="adv-label" data-i18n="conv.adv.quality">JPEG 质量</label>
                                     <div class="adv-control">
                                         <select id="advQualityMode">
-                                            <option value="random">随机 88-95 (推荐)</option>
-                                            <option value="custom">自定义…</option>
+                                            <option value="random" data-i18n="conv.adv.quality.rand">随机 88-95 (推荐)</option>
+                                            <option value="custom" data-i18n="conv.adv.quality.custom">自定义…</option>
                                         </select>
                                         <input type="range" id="advQuality" class="hidden" min="60" max="100" step="1" value="92">
                                         <span class="slider-val hidden" id="advQualityVal">92</span>
                                     </div>
                                 </div>
                                 <div class="adv-field">
-                                    <label class="adv-label">ISO</label>
-                                    <input type="number" id="advIso" placeholder="按相机默认" min="25" max="102400">
+                                    <label class="adv-label" data-i18n="conv.adv.iso">ISO</label>
+                                    <input type="number" id="advIso" data-i18n-attr="placeholder:conv.adv.iso.ph" placeholder="按相机默认" min="25" max="102400">
                                 </div>
                                 <div class="adv-field">
-                                    <label class="adv-label">光圈 f/</label>
-                                    <input type="number" id="advFNumber" placeholder="按相机默认" min="0.9" max="32" step="0.1">
+                                    <label class="adv-label" data-i18n="conv.adv.fnum">光圈 f/</label>
+                                    <input type="number" id="advFNumber" data-i18n-attr="placeholder:conv.adv.iso.ph" placeholder="按相机默认" min="0.9" max="32" step="0.1">
                                 </div>
                                 <div class="adv-field">
-                                    <label class="adv-label">快门 1/…</label>
-                                    <input type="number" id="advShutterDen" placeholder="按相机默认" min="1" max="8000">
+                                    <label class="adv-label" data-i18n="conv.adv.shutter">快门 1/…</label>
+                                    <input type="number" id="advShutterDen" data-i18n-attr="placeholder:conv.adv.iso.ph" placeholder="按相机默认" min="1" max="8000">
                                 </div>
                             </div>
                         </details>
 
                         <button class="btn-primary btn-full" id="btnConvert">
                             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3.54-7.13"/><polyline points="21 4 21 12 13 12"/></svg>
-                            开始转换
+                            <span data-i18n="conv.runBtn">开始转换</span>
                         </button>
                         <div class="convert-result" id="convertResult"></div>
                     </div>
@@ -380,22 +386,21 @@
                 <img src="docs/screenshots/wechat-qr.jpg" alt="AI 电商微信交流群二维码" loading="lazy">
             </a>
             <div class="community-text">
-                <span class="community-eyebrow">社群</span>
-                <h3 class="community-title" id="commTitle">AI 电商微信交流群</h3>
-                <p class="community-sub">扫码加入讨论 · AI 图片工具 / 电商素材 / 自动化 / 工具链分享</p>
-                <p class="community-hint">点二维码查看原图,或在 <a href="https://github.com/863401402/image-provenance/issues" target="_blank" rel="noopener">GitHub Issues</a> 提醒更新</p>
+                <span class="community-eyebrow" data-i18n="comm.eyebrow">社群</span>
+                <h3 class="community-title" id="commTitle" data-i18n="comm.title">AI 电商微信交流群</h3>
+                <p class="community-sub" data-i18n="comm.sub">扫码加入讨论 · AI 图片工具 / 电商素材 / 自动化 / 工具链分享</p>
+                <p class="community-hint" data-i18n="comm.hint.html" data-i18n-html>点二维码查看原图,或在 <a href="https://github.com/863401402/image-provenance/issues" target="_blank" rel="noopener">GitHub Issues</a> 提醒更新</p>
             </div>
         </section>
 
         <section class="stats-bar hidden" id="statsBar" aria-label="使用统计">
-            <div class="stat-cell"><span class="stat-num" id="statVisits">—</span><span class="stat-label">访问</span></div>
-            <div class="stat-cell"><span class="stat-num" id="statAnalyses">—</span><span class="stat-label">检测</span></div>
-            <div class="stat-cell"><span class="stat-num" id="statConversions">—</span><span class="stat-label">转换</span></div>
+            <div class="stat-cell"><span class="stat-num" id="statVisits">—</span><span class="stat-label" data-i18n="stats.visits">访问</span></div>
+            <div class="stat-cell"><span class="stat-num" id="statAnalyses">—</span><span class="stat-label" data-i18n="stats.analyses">检测</span></div>
+            <div class="stat-cell"><span class="stat-num" id="statConversions">—</span><span class="stat-label" data-i18n="stats.conversions">转换</span></div>
         </section>
 
         <footer class="foot">
-            <span>MIT · 开源于 <a href="https://github.com/863401402/image-provenance" target="_blank" rel="noopener">GitHub</a></span>
-            <span class="dot-sep"></span>
+            <span data-i18n="foot.mit" data-i18n-html>MIT · 开源于 <a href="https://github.com/863401402/image-provenance" target="_blank" rel="noopener">GitHub</a></span>
         </footer>
     </div>
 

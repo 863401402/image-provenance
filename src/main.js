@@ -10,6 +10,14 @@ import { renderFrequencyPanel } from './frequency/panel.js';
 import { parseMetadata, sniffJumbf, getGenerationHints } from './metadata.js';
 import { renderMetadataPanel } from './panel-metadata.js';
 import { initStats, trackAnalysis, trackConversion } from './stats.js';
+import { getLang, setLang, applyI18n, t, refineLangByIP } from './i18n.js';
+
+// Apply i18n to static markup immediately so the first paint is in the
+// right language. Dynamic renders below use t() lookups.
+applyI18n();
+// On first visit, refine using IP geo (CN/HK/TW/SG/MO → zh, else en).
+// Only fires if no manual choice has been made; safe on failure.
+refineLangByIP();
 
 // Kick off stats collection (safe on failure — stats just stay dashed)
 initStats();
@@ -22,20 +30,23 @@ let lastFreqBytes = null, lastFreqResult = null;
 
 // ================= Camera selector (grouped) =================
 const sel = document.getElementById('cameraSelector');
-const groupHtml = CAMERA_GROUPS.map(g => {
-    const cams = Object.entries(CAMERA_PROFILES).filter(([, c]) => c.group === g.id);
-    const cells = cams.map(([key, cam]) => `
-        <div class="camera-option ${key === selectedProfile ? 'selected' : ''}" data-key="${key}">
-            <div class="icon">${cam.icon}</div>
-            <div class="name">${escHtml(cam.displayName)}</div>
-            <div class="model">${escHtml(cam.Make)}</div>
-        </div>`).join('');
-    return `<div class="camera-group">
-        <div class="camera-group-title">${g.icon} ${escHtml(g.label)} <span class="camera-group-count">${cams.length}</span></div>
-        <div class="camera-grid">${cells}</div>
-    </div>`;
-}).join('');
-sel.innerHTML = groupHtml;
+function renderCameraSelector() {
+    const groupHtml = CAMERA_GROUPS.map(g => {
+        const cams = Object.entries(CAMERA_PROFILES).filter(([, c]) => c.group === g.id);
+        const cells = cams.map(([key, cam]) => `
+            <div class="camera-option ${key === selectedProfile ? 'selected' : ''}" data-key="${key}">
+                <div class="icon">${cam.icon}</div>
+                <div class="name">${escHtml(cam.displayName)}</div>
+                <div class="model">${escHtml(cam.Make)}</div>
+            </div>`).join('');
+        return `<div class="camera-group">
+            <div class="camera-group-title">${g.icon} ${escHtml(t('conv.group.' + g.id))} <span class="camera-group-count">${cams.length}</span></div>
+            <div class="camera-grid">${cells}</div>
+        </div>`;
+    }).join('');
+    sel.innerHTML = groupHtml;
+}
+renderCameraSelector();
 sel.addEventListener('click', (e) => {
     const opt = e.target.closest('.camera-option');
     if (!opt) return;
@@ -46,10 +57,12 @@ sel.addEventListener('click', (e) => {
 
 // ================= Advanced panel init =================
 const gpsSel = document.getElementById('advGps');
-if (gpsSel) {
-    gpsSel.innerHTML = Object.entries(GPS_PRESETS).map(([k, v]) =>
-        `<option value="${k}">${escHtml(v.label)}</option>`).join('');
+function renderGpsOptions() {
+    if (!gpsSel) return;
+    gpsSel.innerHTML = Object.keys(GPS_PRESETS).map(k =>
+        `<option value="${k}">${escHtml(t('gps.' + k))}</option>`).join('');
 }
+renderGpsOptions();
 const dateSel = document.getElementById('advDatePreset');
 const dateCustom = document.getElementById('advDateCustom');
 dateSel?.addEventListener('change', () => {
@@ -230,17 +243,14 @@ async function handleFile(file) {
     const freqPanel = document.getElementById('freqPanel');
     if (freqPanel) freqPanel.innerHTML = `
         <div class="freq-disclaimer">
-            <span class="freq-disclaimer-tag">非专业分析</span>
-            <span>仅供参考 · 基于启发式规则,不等同于学术级分类器</span>
+            <span class="freq-disclaimer-tag">${escHtml(t('freq.disclaimer.tag'))}</span>
+            <span>${escHtml(t('freq.disclaimer.text'))}</span>
         </div>
         <button class="btn-primary" id="btnRunFreq">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-            运行频域分析
+            ${escHtml(t('freq.runBtn'))}
         </button>
-        <p class="panel-hint">
-            提取 65 个频域特征:FFT 幅度谱、径向功率谱、相位一致性、LSB 偏置、小波子带能量……<br>
-            在 Web Worker 中执行,不阻塞页面。耗时约 1-3 秒。
-        </p>`;
+        <p class="panel-hint">${t('freq.panelHint.html')}</p>`;
     document.getElementById('metadataPanel').innerHTML = '';
     document.getElementById('detectionItems').innerHTML = '';
     document.getElementById('convertResult').style.display = 'none';
@@ -249,13 +259,13 @@ async function handleFile(file) {
     // Show preview immediately
     document.getElementById('previewImg').src = URL.createObjectURL(file);
     document.getElementById('fileName').textContent = file.name;
-    document.getElementById('fileType').textContent = '解析中…';
+    document.getElementById('fileType').textContent = '—';
     document.getElementById('fileSize').textContent = formatSize(file.size);
     document.getElementById('fileDims').textContent = '…';
     document.getElementById('fileHash').textContent = '…';
 
     // Hide summary + badge until analysis finishes
-    document.getElementById('headerTitle').textContent = '正在分析';
+    document.getElementById('headerTitle').textContent = t('result.analyzing');
     document.getElementById('headerSubtitle').textContent = '';
     document.getElementById('headerBadge').textContent = '';
     document.getElementById('headerBadge').className = 'pill';
@@ -264,14 +274,14 @@ async function handleFile(file) {
     analysisLog.classList.remove('hidden');
 
     try {
-        const buffer = await runStep(analysisLog, '读取文件字节', async () => {
+        const buffer = await runStep(analysisLog, t('log.readBytes'), async () => {
             const b = await file.arrayBuffer();
             return { value: b, detail: `${formatSize(b.byteLength)}` };
         }, 180);
         const uint8 = new Uint8Array(buffer);
         currentBytes = uint8;
 
-        const hashHex = await runStep(analysisLog, '计算 SHA-256 指纹', async () => {
+        const hashHex = await runStep(analysisLog, t('log.sha256'), async () => {
             const h = await sha256(buffer);
             return { value: h, detail: `${h.slice(0, 16)}…` };
         }, 240);
@@ -279,57 +289,49 @@ async function handleFile(file) {
 
         const fileType = file.type === 'image/png' ? 'PNG'
             : file.type === 'image/jpeg' ? 'JPEG'
-            : file.type === 'image/webp' ? 'WebP' : (file.type || '未知');
+            : file.type === 'image/webp' ? 'WebP' : (file.type || '—');
         document.getElementById('fileType').textContent = fileType;
 
         getImageDims(file).then(d => { document.getElementById('fileDims').textContent = d; });
 
-        await runStep(analysisLog, '扫描 JUMBF / C2PA 签名容器', async () => {
+        await runStep(analysisLog, t('log.jumbf'), async () => {
             currentJumbf = sniffJumbf(uint8);
             const jumbfDetail = currentJumbf.present
-                ? `发现 ${currentJumbf.indices.length} 个 JUMBF box${currentJumbf.digitalSourceType ? ` · ${currentJumbf.digitalSourceType}` : ''}`
-                : '未发现';
+                ? t('log.jumbfHit', { n: currentJumbf.indices.length }) + (currentJumbf.digitalSourceType ? ` · ${currentJumbf.digitalSourceType}` : '')
+                : t('log.jumbfNone');
             return { detail: jumbfDetail };
         }, 320, currentJumbf?.present ? 'hit' : 'done');
 
-        await runStep(analysisLog, '解析 EXIF / XMP / IPTC / ICC', async () => {
+        await runStep(analysisLog, t('log.exif'), async () => {
             currentMeta = await parseMetadata(uint8);
             const keys = Object.keys(currentMeta).filter(k => !k.startsWith('_'));
-            return { detail: keys.length ? `读取到 ${keys.length} 个字段` : '无元数据' };
+            return { detail: keys.length ? t('log.fieldsCount', { n: keys.length }) : t('log.noMeta') };
         }, 420);
 
-        const { detections } = await runStep(analysisLog, '匹配 AI 生成标记库', async () => {
+        const { detections } = await runStep(analysisLog, t('log.markers'), async () => {
             const res = await runAllDetections(uint8);
             const hits = res.detections.filter(d => d.hit && d.category !== 'edit'
                 && (d.confidence === 'strong' || d.confidence === 'medium')).length;
-            return { value: res, detail: hits ? `命中 ${hits} 项` : '全部阴性' };
+            return { value: res, detail: hits ? t('log.hits', { n: hits }) : t('log.allNeg') };
         }, 360, 'done');
 
-        await runStep(analysisLog, '字节级水印启发分析', () => sleep(200), 320);
+        await runStep(analysisLog, t('log.wmHeuristic'), () => sleep(200), 320);
 
-        // Render results. "命中" only fires on strong/medium confidence —
-        // structured metadata declarations or metadata keyword matches.
-        // Weak signals (byte-level watermark heuristic, byte strings without
-        // a full JUMBF structure) have too many false positives to raise the
-        // top-level verdict; they still appear as cards below.
+        // Render results. Only strong/medium confidence counts as HIT.
         const aiHits = detections.filter(d => d.hit && d.category !== 'edit'
             && (d.confidence === 'strong' || d.confidence === 'medium'));
         const weakOnly = detections.filter(d => d.hit && d.category !== 'edit'
             && d.confidence === 'weak');
         const editHits = detections.filter(d => d.hit && d.category === 'edit');
         const anyHit = aiHits.length > 0;
-        document.getElementById('headerTitle').textContent = anyHit
-            ? '发现 AI 来源凭证线索'
-            : '未发现 AI 来源凭证';
+        document.getElementById('headerTitle').textContent = anyHit ? t('result.aiHit') : t('result.aiClean');
         document.getElementById('headerSubtitle').textContent = anyHit
-            ? '元数据中直接声明或强烈指向 AI 生成工具。'
-            : weakOnly.length
-                ? '未检出元数据声明的 AI 标记;仅有字节级启发性异常,不足以判定。'
-                : editHits.length
-                    ? '未检出 AI 生成标记,但图片经过修图软件处理。'
-                    : '元数据中没有发现 AI 生成相关标记。';
+            ? t('result.aiHitSub')
+            : weakOnly.length ? t('result.weakSub')
+            : editHits.length ? t('result.editSub')
+            : t('result.cleanSub');
         const hb = document.getElementById('headerBadge');
-        hb.textContent = anyHit ? '命中' : '未命中';
+        hb.textContent = anyHit ? t('badge.hit') : t('badge.miss');
         hb.className = 'pill ' + (anyHit ? 'badge-hit' : 'badge-clean');
 
         // Fade log out, reveal detection items
@@ -342,13 +344,9 @@ async function handleFile(file) {
             const div = document.createElement('div');
             div.className = 'detection-item';
             const detailHtml = d.detail
-                ? `<details class="detection-item-details"><summary>查看详情</summary><pre class="detection-item-detail">${escHtml(d.detail)}</pre></details>`
+                ? `<details class="detection-item-details"><summary>${escHtml(t('det.detail.viewMore'))}</summary><pre class="detection-item-detail">${escHtml(d.detail)}</pre></details>`
                 : '';
-            const confHtml = d.confidence ? `<span class="conf conf-${d.confidence}">${
-                d.confidence === 'strong' ? '强证据' :
-                d.confidence === 'medium' ? '中等' :
-                d.confidence === 'info' ? '提示' : '弱'
-            }</span>` : '';
+            const confHtml = d.confidence ? `<span class="conf conf-${d.confidence}">${escHtml(t('conf.' + d.confidence))}</span>` : '';
             div.innerHTML = `
                 <div class="detection-item-header">
                     <span class="detection-item-title">${escHtml(d.title)}${confHtml}</span>
@@ -366,7 +364,7 @@ async function handleFile(file) {
     } catch (err) {
         const errLine = document.createElement('div');
         errLine.className = 'log-line done hit';
-        errLine.innerHTML = `<span class="log-mark">✕</span><span class="log-text">分析失败:${escHtml(err.message)}</span>`;
+        errLine.innerHTML = `<span class="log-mark">✕</span><span class="log-text">${escHtml(t('log.err', { msg: err.message }))}</span>`;
         analysisLog.appendChild(errLine);
     }
 }
@@ -416,7 +414,7 @@ document.addEventListener('click', async (ev) => {
         lastFreqResult = result;
         renderFrequencyPanel(panel, result);
     } catch (err) {
-        panel.innerHTML = `<div style="color:var(--danger);font-weight:600;padding:16px">频域分析失败: ${escHtml(err.message)}</div>`;
+        panel.innerHTML = `<div style="color:var(--danger);font-weight:600;padding:16px">${escHtml(t('freq.err', { msg: err.message }))}</div>`;
     }
 });
 
@@ -427,7 +425,7 @@ document.getElementById('btnConvert').addEventListener('click', async () => {
     const resultDiv = document.getElementById('convertResult');
     resultDiv.style.display = 'block';
     resultDiv.className = 'convert-result';
-    resultDiv.innerHTML = '<div class="loading"><div class="spinner"></div>正在处理...</div>';
+    resultDiv.innerHTML = `<div class="loading"><div class="spinner"></div>${escHtml(t('conv.processing'))}</div>`;
     btn.disabled = true;
 
     try {
@@ -451,14 +449,14 @@ document.getElementById('btnConvert').addEventListener('click', async () => {
         const outName = `${origName}_${profile.Make}_${Date.now().toString(36)}.jpg`;
 
         resultDiv.innerHTML = `
-            <div style="color:var(--success);font-weight:600;margin-bottom:10px">转换完成</div>
+            <div style="color:var(--success);font-weight:600;margin-bottom:10px">${escHtml(t('conv.done'))}</div>
             <img src="${url}" alt="转换结果">
             <div style="font-size:12px;color:var(--text-muted);margin:8px 0;line-height:1.8">
                 ${log.map(l => `• ${escHtml(l)}`).join('<br>')}
             </div>
             <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
-                <a class="download-btn" href="${url}" download="${escHtml(outName)}">下载 (${formatSize(blob.size)})</a>
-                <button class="btn-secondary" id="btnReanalyze">重新分析</button>
+                <a class="download-btn" href="${url}" download="${escHtml(outName)}">${escHtml(t('conv.download', { size: formatSize(blob.size) }))}</a>
+                <button class="btn-secondary" id="btnReanalyze">${escHtml(t('conv.reanalyze'))}</button>
             </div>
         `;
         document.getElementById('btnReanalyze').onclick = async () => {
@@ -468,7 +466,7 @@ document.getElementById('btnConvert').addEventListener('click', async () => {
         trackConversion();   // bump public conversion counter
     } catch (err) {
         resultDiv.className = 'convert-result error';
-        resultDiv.innerHTML = `<div style="color:var(--danger);font-weight:600">转换失败: ${escHtml(err.message)}</div>`;
+        resultDiv.innerHTML = `<div style="color:var(--danger);font-weight:600">${escHtml(t('conv.err', { msg: err.message }))}</div>`;
     } finally {
         btn.disabled = false;
     }
@@ -486,3 +484,32 @@ if (themeToggle) {
         if (meta) meta.setAttribute('content', next === 'dark' ? '#0a0a0b' : '#ffffff');
     });
 }
+
+// ================= Language toggle =================
+const langToggle = document.getElementById('langToggle');
+function syncLangToggle() {
+    const cur = getLang();
+    langToggle?.querySelectorAll('.lang-opt').forEach(el => {
+        el.classList.toggle('active', el.dataset.lang === cur);
+    });
+}
+syncLangToggle();
+langToggle?.addEventListener('click', (e) => {
+    const target = e.target.closest('.lang-opt');
+    const next = target ? target.dataset.lang : (getLang() === 'zh' ? 'en' : 'zh');
+    if (next === getLang()) return;
+    setLang(next);
+});
+document.addEventListener('langchange', () => {
+    syncLangToggle();
+    renderCameraSelector();
+    renderGpsOptions();
+    // Re-render metadata panel if it was rendered
+    const mp = document.getElementById('metadataPanel');
+    if (mp && mp.innerHTML && currentMeta) {
+        renderMetadataPanel(mp, {
+            meta: currentMeta, jumbf: currentJumbf,
+            file: currentFile, dims: document.getElementById('fileDims').textContent,
+        });
+    }
+});

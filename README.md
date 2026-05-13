@@ -18,7 +18,7 @@
 
 <img src="docs/screenshots/wechat-qr.jpg" alt="微信交流群二维码" width="240">
 
-**🔗 友情链接** · [**LINUX DO**](https://linux.do/) — 真正的技术交流社区
+**🔗 友情链接** · [**LINUX DO**](https://linux.do/) · [**NodeSeek**](https://www.nodeseek.com/) — 国内技术交流社区
 
 ---
 
