@@ -82,14 +82,66 @@ export function stripC2paPng(data) {
 
 // --- Canvas re-encode to JPEG (wipes all metadata) ---
 
+// Read EXIF Orientation from raw bytes (1-8, default 1)
+function readExifOrientation(bytes) {
+    if (bytes.length < 4 || bytes[0] !== 0xFF || bytes[1] !== 0xD8) return 1;
+    let pos = 2;
+    while (pos < bytes.length - 1) {
+        if (bytes[pos] !== 0xFF) break;
+        const mk = bytes[pos + 1];
+        if (mk === 0xDA) break; // SOS
+        const segLen = (bytes[pos + 2] << 8) | bytes[pos + 3];
+        if (mk === 0xE1 && segLen > 8) { // APP1 = EXIF
+            const hdr = String.fromCharCode(...bytes.slice(pos + 4, pos + 14));
+            if (hdr.startsWith('Exif')) {
+                const tiffOff = pos + 4 + 6; // skip "Exif\0\0"
+                if (tiffOff + 8 > bytes.length) break;
+                const big = bytes[tiffOff] === 0x4D; // 'M' = big-endian
+                const w = big ? (a, o) => (a[o] << 8) | a[o + 1] : (a, o) => a[o] | (a[o + 1] << 8);
+                const ifd0Off = w(bytes, tiffOff + 4) + tiffOff;
+                const numEnt = w(bytes, ifd0Off);
+                for (let i = 0; i < numEnt; i++) {
+                    const ent = ifd0Off + 2 + i * 12;
+                    if (ent + 12 > bytes.length) break;
+                    if (w(bytes, ent) === 0x0112) { // Orientation tag
+                        return w(bytes, ent + 8);
+                    }
+                }
+            }
+            break;
+        }
+        pos += 2 + segLen;
+    }
+    return 1;
+}
+
 async function decodeToCanvas(bytes, mime) {
     const blob = new Blob([bytes], { type: mime });
     const bitmap = await createImageBitmap(blob);
+
+    // Read orientation from EXIF (only for JPEG)
+    const orient = mime === 'image/jpeg' ? readExifOrientation(bytes) : 1;
+
+    // Swap width/height for rotated orientations
+    const swap = orient >= 5 && orient <= 8;
     const canvas = document.createElement('canvas');
-    canvas.width = bitmap.width;
-    canvas.height = bitmap.height;
+    canvas.width = swap ? bitmap.height : bitmap.width;
+    canvas.height = swap ? bitmap.width : bitmap.height;
     const ctx = canvas.getContext('2d');
+
+    // Apply orientation transform
+    ctx.save();
+    switch (orient) {
+        case 2: ctx.transform(-1, 0, 0, 1, canvas.width, 0); break;       // flip H
+        case 3: ctx.transform(-1, 0, 0, -1, canvas.width, canvas.height); break; // rotate 180
+        case 4: ctx.transform(1, 0, 0, -1, 0, canvas.height); break;      // flip V
+        case 5: ctx.transform(0, 1, 1, 0, 0, 0); break;                   // transpose
+        case 6: ctx.transform(0, 1, -1, 0, canvas.width, 0); break;       // rotate CW 90
+        case 7: ctx.transform(0, -1, -1, 0, canvas.width, canvas.height); break; // transverse
+        case 8: ctx.transform(0, -1, 1, 0, 0, canvas.height); break;      // rotate CCW 90
+    }
     ctx.drawImage(bitmap, 0, 0);
+    ctx.restore();
     bitmap.close?.();
     return canvas;
 }
