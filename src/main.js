@@ -11,6 +11,7 @@ import { parseMetadata, sniffJumbf, getGenerationHints } from './metadata.js';
 import { renderMetadataPanel } from './panel-metadata.js';
 import { initStats, trackAnalysis, trackConversion } from './stats.js';
 import { getLang, setLang, applyI18n, t, refineLangByIP } from './i18n.js';
+import { classifyEvidence } from './verdict.js';
 
 // Apply i18n to static markup immediately so the first paint is in the
 // right language. Dynamic renders below use t() lookups.
@@ -27,6 +28,8 @@ let currentFile = null;
 let currentBytes = null;
 let currentMeta = null, currentJumbf = null;
 let lastFreqBytes = null, lastFreqResult = null;
+let currentDetections = [];
+let currentFrequencyScore;
 
 // ================= Camera selector (grouped) =================
 const sel = document.getElementById('cameraSelector');
@@ -227,9 +230,67 @@ const resultView = document.getElementById('resultView');
 const previewBlock = document.getElementById('previewBlock');
 const analysisLog = document.getElementById('analysisLog');
 
+const SUMMARY_KEYS = {
+    provenance: ['result.aiHit', 'result.aiHitSub', 'badge.hit', 'badge-hit'],
+    pixel: ['result.pixelHit', 'result.pixelHitSub', 'badge.pixel', 'badge-uncertain'],
+    uncertain: ['result.uncertain', 'result.uncertainSub', 'badge.uncertain', 'badge-uncertain'],
+    edit: ['result.aiClean', 'result.editSub', 'badge.noEvidence', 'badge-uncertain'],
+    none: ['result.aiClean', 'result.cleanSub', 'badge.noEvidence', 'badge-uncertain'],
+    pending: ['result.aiClean', 'result.pixelAnalyzing', 'badge.analyzing', 'badge-uncertain'],
+};
+
+function renderEvidenceSummary(detections, frequencyScore) {
+    const verdict = classifyEvidence(detections, frequencyScore);
+    const [titleKey, subtitleKey, badgeKey, badgeClass] = SUMMARY_KEYS[verdict.kind];
+    document.getElementById('headerTitle').textContent = t(titleKey);
+    document.getElementById('headerSubtitle').textContent = t(subtitleKey);
+    const badge = document.getElementById('headerBadge');
+    badge.textContent = t(badgeKey);
+    badge.className = `pill ${badgeClass}`;
+}
+
+function renderFrequencyLoading() {
+    const panel = document.getElementById('freqPanel');
+    panel.innerHTML = `
+        <div class="loading"><div class="spinner"></div><br>
+        <span id="freqStage">${escHtml(t('freq.initializing'))}</span></div>`;
+    return panel;
+}
+
+function renderFrequencyError(panel, err) {
+    panel.innerHTML = `
+        <div class="freq-error">${escHtml(t('freq.err', { msg: err.message }))}</div>
+        <button class="btn-secondary" id="btnRunFreq">${escHtml(t('freq.retryBtn'))}</button>`;
+}
+
+async function runFrequencyAnalysis(file, bytes) {
+    if (lastFreqBytes === bytes && lastFreqResult) return lastFreqResult;
+    const panel = renderFrequencyLoading();
+    try {
+        const result = await analyzeFrequency(bytes, file.type || 'image/jpeg', {
+            onProgress: ({ stage, pct, info }) => {
+                if (bytes !== currentBytes) return;
+                const el = document.getElementById('freqStage');
+                const stageText = t(`freq.stage.${stage}`);
+                if (el) el.textContent = `[${pct}%] ${stageText}${info ? ' · ' + info : ''}`;
+            },
+        });
+        if (bytes !== currentBytes) return null;
+        lastFreqBytes = bytes;
+        lastFreqResult = result;
+        renderFrequencyPanel(panel, result);
+        return result;
+    } catch (err) {
+        if (bytes === currentBytes) renderFrequencyError(panel, err);
+        throw err;
+    }
+}
+
 async function handleFile(file) {
     currentFile = file;
     lastFreqBytes = null; lastFreqResult = null;
+    currentDetections = [];
+    currentFrequencyScore = undefined;
 
     // Reset UI to reveal result view
     emptyState.classList.add('hidden');
@@ -314,25 +375,12 @@ async function handleFile(file) {
                 && (d.confidence === 'strong' || d.confidence === 'medium')).length;
             return { value: res, detail: hits ? t('log.hits', { n: hits }) : t('log.allNeg') };
         }, 360, 'done');
+        currentDetections = detections;
 
         await runStep(analysisLog, t('log.wmHeuristic'), () => sleep(200), 320);
 
-        // Render results. Only strong/medium confidence counts as HIT.
-        const aiHits = detections.filter(d => d.hit && d.category !== 'edit'
-            && (d.confidence === 'strong' || d.confidence === 'medium'));
-        const weakOnly = detections.filter(d => d.hit && d.category !== 'edit'
-            && d.confidence === 'weak');
-        const editHits = detections.filter(d => d.hit && d.category === 'edit');
-        const anyHit = aiHits.length > 0;
-        document.getElementById('headerTitle').textContent = anyHit ? t('result.aiHit') : t('result.aiClean');
-        document.getElementById('headerSubtitle').textContent = anyHit
-            ? t('result.aiHitSub')
-            : weakOnly.length ? t('result.weakSub')
-            : editHits.length ? t('result.editSub')
-            : t('result.cleanSub');
-        const hb = document.getElementById('headerBadge');
-        hb.textContent = anyHit ? t('badge.hit') : t('badge.miss');
-        hb.className = 'pill ' + (anyHit ? 'badge-hit' : 'badge-clean');
+        // Show provenance immediately, then refine it with decoded-pixel evidence.
+        renderEvidenceSummary(detections, undefined);
 
         // Fade log out, reveal detection items
         await sleep(350);
@@ -358,8 +406,18 @@ async function handleFile(file) {
             container.appendChild(div);
         });
 
-        // Render metadata tab lazily on first activation (see tab handler below)
+        // Render metadata tab lazily on first activation (see tab handler below).
         document.getElementById('metadataPanel')._pending = true;
+
+        let frequencyResult = null;
+        try {
+            frequencyResult = await runFrequencyAnalysis(file, uint8);
+        } catch {
+            // Provenance results remain usable when image decoding or the worker fails.
+        }
+        if (uint8 !== currentBytes) return;
+        currentFrequencyScore = frequencyResult?.score || null;
+        renderEvidenceSummary(detections, currentFrequencyScore);
         trackAnalysis();   // bump public analysis counter
     } catch (err) {
         const errLine = document.createElement('div');
@@ -394,28 +452,10 @@ document.addEventListener('click', async (ev) => {
     const btn = ev.target.closest && ev.target.closest('#btnRunFreq');
     if (!btn) return;
     if (!currentFile || !currentBytes) return;
-    const panel = document.getElementById('freqPanel');
-    if (lastFreqBytes === currentBytes && lastFreqResult) {
-        renderFrequencyPanel(panel, lastFreqResult);
-        return;
-    }
     btn.disabled = true;
-    panel.innerHTML = `
-        <div class="loading"><div class="spinner"></div><br>
-        <span id="freqStage">初始化...</span></div>`;
     try {
-        const result = await analyzeFrequency(currentBytes, currentFile.type || 'image/jpeg', {
-            onProgress: ({ stage, pct, info }) => {
-                const el = document.getElementById('freqStage');
-                if (el) el.textContent = `[${pct}%] ${stage}${info ? ' · ' + info : ''}`;
-            },
-        });
-        lastFreqBytes = currentBytes;
-        lastFreqResult = result;
-        renderFrequencyPanel(panel, result);
-    } catch (err) {
-        panel.innerHTML = `<div style="color:var(--danger);font-weight:600;padding:16px">${escHtml(t('freq.err', { msg: err.message }))}</div>`;
-    }
+        await runFrequencyAnalysis(currentFile, currentBytes);
+    } catch {}
 });
 
 // ================= Convert =================
@@ -511,5 +551,11 @@ document.addEventListener('langchange', () => {
             meta: currentMeta, jumbf: currentJumbf,
             file: currentFile, dims: document.getElementById('fileDims').textContent,
         });
+    }
+    if (currentDetections.length) {
+        renderEvidenceSummary(currentDetections, currentFrequencyScore);
+    }
+    if (lastFreqResult) {
+        renderFrequencyPanel(document.getElementById('freqPanel'), lastFreqResult);
     }
 });

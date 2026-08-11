@@ -4,6 +4,9 @@
   "description": "Client-side AI image provenance detector and watermark tooling",
   "type": "module",
   "private": true,
+  "scripts": {
+    "test": "node --test"
+  },
   "repository": "https://github.com/863401402/image-provenance",
   "license": "MIT"
 }

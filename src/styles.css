@@ -419,6 +419,7 @@ a:hover { color: var(--text-muted); }
 .vote-neg .vote-weight { color: var(--success); }
 .vote-reason { color: var(--text); flex: 1; }
 .freq-empty { font-size: 12px; color: var(--text-subtle); padding: 10px 0; }
+.freq-error { color: var(--danger); font-weight: 600; padding: 12px 0; }
 
 .freq-features { margin-top: 14px; font-size: 12px; }
 .freq-features summary {
