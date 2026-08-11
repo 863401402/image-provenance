@@ -31,34 +31,49 @@ async function containsQrCode(bitmap) {
     }
 }
 
+function skippedResult(reason) {
+    return {
+        skipped: true,
+        suitability: { suitable: false, reasons: [reason], metrics: {} },
+        score: { applicable: false, confidence: null, total: 0, positive: 0, negative: 0, votes: [] },
+        timing: { features: 0, score: 0 },
+        side: null,
+    };
+}
+
+function abortError() {
+    return new DOMException('Frequency analysis canceled', 'AbortError');
+}
+
 export async function analyzeFrequency(bytes, mime, opts = {}) {
     const onProgress = opts.onProgress || (() => {});
+    const signal = opts.signal;
+    if (signal?.aborted) throw abortError();
     const blob = new Blob([bytes], { type: mime });
     const bitmap = await createImageBitmap(blob);
     try {
+        if (signal?.aborted) throw abortError();
+        if (bitmap.width < 32 || bitmap.height < 32) return skippedResult('tooSmall');
         if (await containsQrCode(bitmap)) {
-            return {
-                skipped: true,
-                suitability: { suitable: false, reasons: ['qrCode'], metrics: {} },
-                score: { applicable: false, confidence: null, total: 0, positive: 0, negative: 0, votes: [] },
-                timing: { features: 0, score: 0 },
-                side: null,
-            };
+            return skippedResult('qrCode');
         }
         const isMobile = /Mobi|Android/i.test(navigator.userAgent);
         const side = nearestPow2(Math.min(pickSize(bitmap.width, bitmap.height, isMobile),
                                           Math.max(bitmap.width, bitmap.height)));
+        const cropSize = Math.min(bitmap.width, bitmap.height);
+        const cropX = Math.floor((bitmap.width - cropSize) / 2);
+        const cropY = Math.floor((bitmap.height - cropSize) / 2);
         onProgress({ stage: 'resize', pct: 3, info: `${bitmap.width}×${bitmap.height} → ${side}×${side}` });
 
         const canvas = document.createElement('canvas');
         canvas.width = side; canvas.height = side;
         const ctx = canvas.getContext('2d');
+        if (!ctx) throw new Error('Canvas 2D context is unavailable');
         ctx.imageSmoothingEnabled = true;
         ctx.imageSmoothingQuality = 'high';
-        // Letterbox-free: fit the bitmap aspect-preserving, padding with black.
-        // Simpler: just stretch. Frequency features on a stretched raster are
-        // still informative — we're not doing CNN inference.
-        ctx.drawImage(bitmap, 0, 0, side, side);
+        // A centered square sample avoids anisotropic stretching, which would
+        // manufacture directional frequency structure.
+        ctx.drawImage(bitmap, cropX, cropY, cropSize, cropSize, 0, 0, side, side);
         const rgba = ctx.getImageData(0, 0, side, side).data;
         const gray = new Float32Array(side * side);
         for (let i = 0, j = 0; i < rgba.length; i += 4, j++) {
@@ -68,14 +83,22 @@ export async function analyzeFrequency(bytes, mime, opts = {}) {
 
         return await new Promise((resolve, reject) => {
             const worker = new Worker(new URL('./worker.js', import.meta.url), { type: 'module' });
+            const cleanup = () => signal?.removeEventListener('abort', onAbort);
+            const onAbort = () => {
+                worker.terminate();
+                cleanup();
+                reject(abortError());
+            };
+            signal?.addEventListener('abort', onAbort, { once: true });
             worker.onmessage = (e) => {
                 const m = e.data;
                 if (m.type === 'progress') onProgress(m);
-                else if (m.type === 'error') { worker.terminate(); reject(new Error(m.message)); }
-                else if (m.type === 'result') { worker.terminate(); resolve({ ...m, side }); }
+                else if (m.type === 'error') { worker.terminate(); cleanup(); reject(new Error(m.message)); }
+                else if (m.type === 'result') { worker.terminate(); cleanup(); resolve({ ...m, side }); }
             };
             worker.onerror = (err) => {
                 worker.terminate();
+                cleanup();
                 reject(new Error('Frequency worker failed: ' + (err.message || 'unknown')));
             };
             // RGBA is a Uint8ClampedArray → we need its underlying buffer for transfer.

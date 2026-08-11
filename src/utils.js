@@ -1,7 +1,19 @@
 // Shared utilities — DOM / bytes / hashing / formatting
 
+export const SUPPORTED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
+
+export function resolveImageMime(file) {
+    const declared = String(file?.type || '').toLowerCase();
+    if (SUPPORTED_IMAGE_TYPES.has(declared)) return declared;
+    const extension = String(file?.name || '').toLowerCase().match(/\.([^.]+)$/)?.[1];
+    if (extension === 'jpg' || extension === 'jpeg') return 'image/jpeg';
+    if (extension === 'png') return 'image/png';
+    if (extension === 'webp') return 'image/webp';
+    return null;
+}
+
 export async function sha256(buffer) {
-    if (window.crypto?.subtle?.digest) {
+    if (globalThis.crypto?.subtle?.digest) {
         try {
             const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
             return Array.from(new Uint8Array(hashBuffer))

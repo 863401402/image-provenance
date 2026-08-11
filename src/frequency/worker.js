@@ -25,6 +25,10 @@ self.onmessage = (e) => {
 
         self.postMessage({ type: 'progress', stage: 'score', pct: 85 });
         const score = { ...scoreFeatures(features), applicable: suitability.suitable };
+        if (!suitability.suitable) {
+            score.confidence = null;
+            score.verdict = 'not-applicable';
+        }
         timing.score = performance.now() - t0 - timing.features;
 
         // Build small transferable viz payloads (don't ship full 1024² FFT back).

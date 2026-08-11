@@ -3,10 +3,10 @@
 import { t } from '../i18n.js';
 
 function verdictText(score) {
-    if (score.total >= 6) return t('freq.verdict.highAI');
-    if (score.total >= 3) return t('freq.verdict.hasAI');
-    if (score.total >= 1) return t('freq.verdict.weak');
-    if (score.total <= -1) return t('freq.verdict.real');
+    if (score.confidence === 'strong') return t('freq.verdict.highAI');
+    if (score.confidence === 'medium') return t('freq.verdict.hasAI');
+    if (score.confidence === 'weak') return t('freq.verdict.weak');
+    if (score.confidence === 'info') return t('freq.verdict.real');
     return t('freq.verdict.unsure');
 }
 

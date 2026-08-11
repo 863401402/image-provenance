@@ -99,7 +99,9 @@ export function downsampleMag(mag, w, h, dstW, dstH) {
 
 // ---------- Radial power spectrum ----------
 // Bins the 2D magnitude by radius from DC (center-shifted) into `bins` buckets.
-export function radialSpectrum(mag, w, h, bins = 64) {
+// `power` preserves the total energy in each annulus; `density` divides by the
+// number of Fourier samples and is suitable for plotting and slope fitting.
+export function radialSpectrumStats(mag, w, h, bins = 64) {
     const power = new Float64Array(bins), count = new Uint32Array(bins);
     const cx = w / 2, cy = h / 2;
     const maxR = Math.min(cx, cy);
@@ -114,9 +116,13 @@ export function radialSpectrum(mag, w, h, bins = 64) {
             count[b]++;
         }
     }
-    const out = new Float32Array(bins);
-    for (let b = 0; b < bins; b++) out[b] = count[b] > 0 ? power[b] / count[b] : 0;
-    return out;
+    const density = new Float32Array(bins);
+    for (let b = 0; b < bins; b++) density[b] = count[b] > 0 ? power[b] / count[b] : 0;
+    return { power, density, count };
+}
+
+export function radialSpectrum(mag, w, h, bins = 64) {
+    return radialSpectrumStats(mag, w, h, bins).density;
 }
 
 // ---------- 8×8 2D DCT-II (naive cosine; 64×64 ops per block is fine) ----------

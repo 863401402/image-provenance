@@ -5,7 +5,7 @@
 //   w, h: power-of-two (enforced upstream)
 // Output: flat object { featureName: number, ... }
 
-import { fft2d, magnitudeShifted, radialSpectrum, dct8, haar2d2level } from './transforms.js';
+import { fft2d, magnitudeShifted, radialSpectrumStats, dct8, haar2d2level } from './transforms.js';
 
 const safeLog = v => Math.log(Math.max(v, 1e-12));
 
@@ -52,15 +52,22 @@ export function extractFeatures(rgba, gray, w, h) {
     // ===== Transforms =====
     const { re, im } = fft2d(gray, w, h);
     const mag = magnitudeShifted(re, im, w, h);
-    const radial = radialSpectrum(mag, w, h, 64);
+    const radialStats = radialSpectrumStats(mag, w, h, 64);
+    const radial = radialStats.density;
+    const radialPower = radialStats.power;
 
     // ===== §1 Spectral energy (1-8) =====
-    const totalAC = radial.reduce((s, v, i) => i === 0 ? s : s + v, 0) || 1e-9;
+    const totalAC = radialPower.reduce((s, v, i) => i === 0 ? s : s + v, 0);
     const binAt = pct => Math.floor(pct * radial.length);
-    const bandSum = (a, b) => { let s = 0; for (let i = a; i < b; i++) s += radial[i]; return s; };
-    f.f01_low_freq_ratio = bandSum(0, binAt(0.10)) / totalAC;
-    f.f02_mid_freq_ratio = bandSum(binAt(0.10), binAt(0.40)) / totalAC;
-    f.f03_high_freq_ratio = bandSum(binAt(0.40), radial.length) / totalAC;
+    const bandPower = (a, b) => {
+        let sum = 0;
+        for (let i = Math.max(1, a); i < Math.min(b, radial.length); i++) sum += radialPower[i];
+        return sum;
+    };
+    const bandRatio = (a, b) => totalAC > 0 ? bandPower(a, b) / totalAC : 0;
+    f.f01_low_freq_ratio = bandRatio(0, binAt(0.10));
+    f.f02_mid_freq_ratio = bandRatio(binAt(0.10), binAt(0.40));
+    f.f03_high_freq_ratio = bandRatio(binAt(0.40), radial.length);
     // Spectral slope: linear fit of log(power) vs log(freq) on log-log, skipping DC
     let sx = 0, sy = 0, sxx = 0, sxy = 0, nPts = 0;
     for (let i = 1; i < radial.length; i++) {
@@ -76,21 +83,26 @@ export function extractFeatures(rgba, gray, w, h) {
     am /= (radial.length - 1);
     f.f05_spectral_flatness = am > 1e-9 ? gm / am : 0;
     // Spectral entropy
-    const radialNorm = radial.map(v => v / totalAC);
+    const radialNorm = Float64Array.from(radialPower, (v, i) => i > 0 && totalAC > 0 ? v / totalAC : 0);
     let ent = 0;
-    for (const p of radialNorm) if (p > 1e-9) ent -= p * safeLog(p);
-    f.f06_spectral_entropy = ent;
+    let activeBins = 0;
+    for (let i = 1; i < radialNorm.length; i++) {
+        const p = radialNorm[i];
+        if (p > 0) { ent -= p * safeLog(p); activeBins++; }
+    }
+    f.f06_spectral_entropy = activeBins > 1 ? ent / Math.log(activeBins) : 0;
     f.f07_dc_component = mag[(h/2) * w + w/2];
     f.f08_ac_energy_total = totalAC;
 
     // ===== §2 Sub-band fine (9-15) =====
     const bands = [[0,0.05],[0.05,0.10],[0.10,0.20],[0.20,0.30],[0.30,0.50],[0.50,0.70],[0.70,1.0]];
     bands.forEach(([a,b], i) => {
-        f[`f0${9+i}_band_${Math.round(a*100)}_${Math.round(b*100)}_ratio`] = bandSum(binAt(a), binAt(b)) / totalAC;
+        const number = String(9 + i).padStart(2, '0');
+        f[`f${number}_band_${Math.round(a*100)}_${Math.round(b*100)}_ratio`] = bandRatio(binAt(a), binAt(b));
     });
 
     // ===== §3 Radial (16-18) =====
-    f.f16_radial_energy_variance = variance(radial);
+    f.f16_radial_energy_variance = variance(radialNorm.subarray(1));
     // Peak count: local maxima above rolling median*1.5
     let peaks = 0;
     for (let i = 2; i < radial.length - 2; i++) {
@@ -102,7 +114,9 @@ export function extractFeatures(rgba, gray, w, h) {
     let symNum = 0, symDen = 0;
     for (let y = 0; y < h; y++) {
         for (let x = 0; x < w/2; x++) {
-            const a = mag[y*w + x], b = mag[(h-1-y)*w + (w-1-x)];
+            const mirrorY = (h - y) % h;
+            const mirrorX = (w - x) % w;
+            const a = mag[y*w + x], b = mag[mirrorY*w + mirrorX];
             symNum += Math.abs(a - b); symDen += a + b;
         }
     }
@@ -254,6 +268,7 @@ export function extractFeatures(rgba, gray, w, h) {
     // ===== §10 DCT block stats (53-57) — 8×8 blocks on gray =====
     const blockStride = 32;  // sample every 32 pixels to stay cheap
     let dctAllSum = 0, dctAllSq = 0, dctN = 0, zeroCoeff = 0, totalCoeff = 0;
+    const dctCoefficients = [];
     const blockVars = [];
     const blk = new Float32Array(64), out = new Float32Array(64);
     for (let y = 0; y + 8 <= h; y += blockStride) {
@@ -263,18 +278,18 @@ export function extractFeatures(rgba, gray, w, h) {
             dct8(blk, out);
             for (let i = 1; i < 64; i++) {
                 dctAllSum += out[i]; dctAllSq += out[i]*out[i]; dctN++;
+                dctCoefficients.push(out[i]);
                 if (Math.abs(out[i]) < 1) zeroCoeff++;
                 totalCoeff++;
             }
             blockVars.push(out[0]);
         }
     }
-    const dctMean = dctAllSum / dctN;
-    const dctVar = dctAllSq / dctN - dctMean * dctMean;
+    const dctMean = dctN ? dctAllSum / dctN : 0;
+    const dctVar = dctN ? dctAllSq / dctN - dctMean * dctMean : 0;
     f.f53_dct_coef_mean = dctMean;
     f.f54_dct_coef_std = Math.sqrt(Math.max(dctVar, 0));
-    // Kurt: reuse moments-ish approximation (expensive path skipped to save time)
-    f.f55_dct_coef_kurt = 0; // Placeholder; left 0 unless we want a full 2nd pass.
+    f.f55_dct_coef_kurt = dctN ? moments(dctCoefficients).kurt : 0;
     f.f56_dct_zero_ratio = totalCoeff ? zeroCoeff / totalCoeff : 0;
     f.f57_dct_block_variance = variance(blockVars);
 

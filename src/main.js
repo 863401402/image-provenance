@@ -12,6 +12,7 @@ import { renderMetadataPanel } from './panel-metadata.js';
 import { initStats, trackAnalysis, trackConversion } from './stats.js';
 import { getLang, setLang, applyI18n, t, refineLangByIP } from './i18n.js';
 import { classifyEvidence } from './verdict.js';
+import { initBatchUi } from './batch/ui.js';
 
 // Apply i18n to static markup immediately so the first paint is in the
 // right language. Dynamic renders below use t() lookups.
@@ -82,7 +83,7 @@ qMode?.addEventListener('change', () => {
 qRange?.addEventListener('input', () => { qVal.textContent = qRange.value; });
 
 function resolveAdvanced() {
-    const adv = { orientation: parseInt(document.getElementById('advOrientation').value, 10) || 1 };
+    const adv = {};
     // date
     const dp = dateSel.value;
     if (dp === 'now') {
@@ -114,18 +115,6 @@ function resolveQuality() {
 // ================= Upload handling =================
 const uploadArea = document.getElementById('uploadArea');
 const fileInput = document.getElementById('fileInput');
-uploadArea.addEventListener('click', (e) => {
-    if (e.target.closest('input, button, a')) return;
-    fileInput.click();
-});
-uploadArea.addEventListener('dragover', e => { e.preventDefault(); uploadArea.classList.add('dragover'); });
-uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('dragover'));
-uploadArea.addEventListener('drop', e => {
-    e.preventDefault();
-    uploadArea.classList.remove('dragover');
-    if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
-});
-fileInput.addEventListener('change', () => { if (fileInput.files.length) handleFile(fileInput.files[0]); });
 
 document.getElementById('btnChangeFile')?.addEventListener('click', (e) => {
     e.stopPropagation();
@@ -561,4 +550,10 @@ document.addEventListener('langchange', () => {
     if (lastFreqResult) {
         renderFrequencyPanel(document.getElementById('freqPanel'), lastFreqResult);
     }
+});
+
+initBatchUi({
+    onSingleFile: handleFile,
+    onAnalysisComplete: trackAnalysis,
+    onConversionComplete: trackConversion,
 });

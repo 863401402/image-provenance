@@ -8,15 +8,50 @@
 //   3. Inject fake camera EXIF via piexifjs (loaded on demand from jsdelivr).
 
 const PIEXIF_URL = 'https://cdn.jsdelivr.net/npm/piexifjs@1.0.6/piexif.js';
+export const MAX_INPUT_BYTES = 100 * 1024 * 1024;
+export const MAX_IMAGE_PIXELS = 50_000_000;
+export const MAX_IMAGE_DIMENSION = 16_384;
+const SUPPORTED_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 let _piexifPromise = null;
+
+export function normalizeJpegQuality(value) {
+    const quality = Number(value);
+    if (!Number.isFinite(quality)) return 0.92;
+    return Math.max(0, Math.min(1, quality));
+}
+
+export function normalizeBackgroundColor(value) {
+    return typeof value === 'string' && value.toLowerCase() === '#000000' ? '#000000' : '#ffffff';
+}
+
+export function validateImageDimensions(width, height) {
+    if (!Number.isInteger(width) || !Number.isInteger(height) || width <= 0 || height <= 0) {
+        throw new RangeError('Image dimensions are invalid.');
+    }
+    if (width > MAX_IMAGE_DIMENSION || height > MAX_IMAGE_DIMENSION) {
+        throw new RangeError(`Image dimensions exceed ${MAX_IMAGE_DIMENSION}px.`);
+    }
+    if (width * height > MAX_IMAGE_PIXELS) {
+        throw new RangeError(`Image exceeds the ${MAX_IMAGE_PIXELS.toLocaleString('en-US')}-pixel safety limit.`);
+    }
+}
 
 function loadPiexif() {
     if (_piexifPromise) return _piexifPromise;
     _piexifPromise = new Promise((resolve, reject) => {
         const s = document.createElement('script');
         s.src = PIEXIF_URL;
-        s.onload = () => resolve(window.piexif);
-        s.onerror = () => reject(new Error('piexifjs failed to load'));
+        s.onload = () => {
+            if (window.piexif) resolve(window.piexif);
+            else {
+                _piexifPromise = null;
+                reject(new Error('piexifjs loaded without exposing its API'));
+            }
+        };
+        s.onerror = () => {
+            _piexifPromise = null;
+            reject(new Error('piexifjs failed to load'));
+        };
         document.head.appendChild(s);
     });
     return _piexifPromise;
@@ -41,11 +76,13 @@ export function stripC2paJpeg(data) {
             break;
         }
         if (pos + 4 > data.length) {
-            for (let i = pos; i < data.length; i++) out.push(data[i]);
-            break;
+            return { bytes: data, removed: 0, totalBytes: 0 };
         }
         const segLen = (data[pos + 2] << 8) | data[pos + 3];
         const segTotal = 2 + segLen;
+        if (segLen < 2 || pos + segTotal > data.length) {
+            return { bytes: data, removed: 0, totalBytes: 0 };
+        }
         if (marker === 0xEB) {                       // APP11: JUMBF container
             removed++;
             totalRemoved += segTotal;
@@ -69,6 +106,9 @@ export function stripC2paPng(data) {
         const chunkLen = (data[pos] << 24 | data[pos + 1] << 16 | data[pos + 2] << 8 | data[pos + 3]) >>> 0;
         const chunkType = String.fromCharCode(data[pos + 4], data[pos + 5], data[pos + 6], data[pos + 7]);
         const chunkTotal = 12 + chunkLen;
+        if (chunkTotal < 12 || pos + chunkTotal > data.length) {
+            return { bytes: data, removed: 0, totalBytes: 0 };
+        }
         if (PNG_C2PA_CHUNKS.includes(chunkType)) {
             removed++;
             totalRemoved += chunkTotal;
@@ -77,73 +117,32 @@ export function stripC2paPng(data) {
         }
         pos += chunkTotal;
     }
+    if (pos !== data.length) return { bytes: data, removed: 0, totalBytes: 0 };
     return { bytes: new Uint8Array(out), removed, totalBytes: totalRemoved };
 }
 
 // --- Canvas re-encode to JPEG (wipes all metadata) ---
 
-// Read EXIF Orientation from raw bytes (1-8, default 1)
-function readExifOrientation(bytes) {
-    if (bytes.length < 4 || bytes[0] !== 0xFF || bytes[1] !== 0xD8) return 1;
-    let pos = 2;
-    while (pos < bytes.length - 1) {
-        if (bytes[pos] !== 0xFF) break;
-        const mk = bytes[pos + 1];
-        if (mk === 0xDA) break; // SOS
-        const segLen = (bytes[pos + 2] << 8) | bytes[pos + 3];
-        if (mk === 0xE1 && segLen > 8) { // APP1 = EXIF
-            const hdr = String.fromCharCode(...bytes.slice(pos + 4, pos + 14));
-            if (hdr.startsWith('Exif')) {
-                const tiffOff = pos + 4 + 6; // skip "Exif\0\0"
-                if (tiffOff + 8 > bytes.length) break;
-                const big = bytes[tiffOff] === 0x4D; // 'M' = big-endian
-                const w = big ? (a, o) => (a[o] << 8) | a[o + 1] : (a, o) => a[o] | (a[o + 1] << 8);
-                const ifd0Off = w(bytes, tiffOff + 4) + tiffOff;
-                const numEnt = w(bytes, ifd0Off);
-                for (let i = 0; i < numEnt; i++) {
-                    const ent = ifd0Off + 2 + i * 12;
-                    if (ent + 12 > bytes.length) break;
-                    if (w(bytes, ent) === 0x0112) { // Orientation tag
-                        return w(bytes, ent + 8);
-                    }
-                }
-            }
-            break;
-        }
-        pos += 2 + segLen;
-    }
-    return 1;
-}
-
-async function decodeToCanvas(bytes, mime) {
+async function decodeToCanvas(bytes, mime, backgroundColor) {
     const blob = new Blob([bytes], { type: mime });
-    const bitmap = await createImageBitmap(blob);
+    const bitmap = await createImageBitmap(blob, { imageOrientation: 'from-image' });
+    try {
+        validateImageDimensions(bitmap.width, bitmap.height);
+        const canvas = document.createElement('canvas');
+        canvas.width = bitmap.width;
+        canvas.height = bitmap.height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) throw new Error('Canvas 2D context is unavailable.');
 
-    // Read orientation from EXIF (only for JPEG)
-    const orient = mime === 'image/jpeg' ? readExifOrientation(bytes) : 1;
-
-    // Swap width/height for rotated orientations
-    const swap = orient >= 5 && orient <= 8;
-    const canvas = document.createElement('canvas');
-    canvas.width = swap ? bitmap.height : bitmap.width;
-    canvas.height = swap ? bitmap.width : bitmap.height;
-    const ctx = canvas.getContext('2d');
-
-    // Apply orientation transform
-    ctx.save();
-    switch (orient) {
-        case 2: ctx.transform(-1, 0, 0, 1, canvas.width, 0); break;       // flip H
-        case 3: ctx.transform(-1, 0, 0, -1, canvas.width, canvas.height); break; // rotate 180
-        case 4: ctx.transform(1, 0, 0, -1, 0, canvas.height); break;      // flip V
-        case 5: ctx.transform(0, 1, 1, 0, 0, 0); break;                   // transpose
-        case 6: ctx.transform(0, 1, -1, 0, canvas.width, 0); break;       // rotate CW 90
-        case 7: ctx.transform(0, -1, -1, 0, canvas.width, canvas.height); break; // transverse
-        case 8: ctx.transform(0, -1, 1, 0, 0, canvas.height); break;      // rotate CCW 90
+        // JPEG has no alpha channel. Explicit compositing avoids browser-specific
+        // black or transparent output for PNG/WebP sources with transparency.
+        ctx.fillStyle = backgroundColor;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(bitmap, 0, 0);
+        return canvas;
+    } finally {
+        bitmap.close?.();
     }
-    ctx.drawImage(bitmap, 0, 0);
-    ctx.restore();
-    bitmap.close?.();
-    return canvas;
 }
 
 function canvasToJpegBlob(canvas, quality = 0.92) {
@@ -161,15 +160,16 @@ function formatExifDate(d) {
 
 function buildExifBytes(piexif, profile, adv) {
     const { ImageIFD, ExifIFD, GPSIFD } = piexif;
-    const now = adv?.dateTime ? new Date(adv.dateTime) : new Date();
+    const requestedDate = adv?.dateTime ? new Date(adv.dateTime) : new Date();
+    const now = Number.isFinite(requestedDate.getTime()) ? requestedDate : new Date();
     const dateStr = formatExifDate(now);
-    const orientation = adv?.orientation || 1;
     const zeroth = {
         [ImageIFD.Make]: profile.Make || 'Unknown',
         [ImageIFD.Model]: profile.Model || 'Unknown',
         [ImageIFD.Software]: profile.Software || '',
         [ImageIFD.DateTime]: dateStr,
-        [ImageIFD.Orientation]: orientation,
+        // createImageBitmap already normalizes source EXIF orientation.
+        [ImageIFD.Orientation]: 1,
     };
     const exif = {
         [ExifIFD.DateTimeOriginal]: dateStr,
@@ -297,7 +297,15 @@ async function injectExifIntoJpeg(jpegBlob, profile, adv) {
 // --- Top-level orchestrator ---
 
 export async function convertImage(inputBytes, inputMime, profile, opts = {}) {
-    const quality = opts.quality ?? 0.92;
+    if (!(inputBytes instanceof Uint8Array)) throw new TypeError('Input bytes must be a Uint8Array.');
+    if (!SUPPORTED_MIME_TYPES.has(inputMime)) throw new TypeError('Unsupported image type. Use JPEG, PNG, or WebP.');
+    if (!profile || typeof profile !== 'object') throw new TypeError('A camera profile is required.');
+    if (inputBytes.byteLength > MAX_INPUT_BYTES) {
+        throw new RangeError(`Image exceeds the ${MAX_INPUT_BYTES / 1024 / 1024}MB input safety limit.`);
+    }
+
+    const quality = normalizeJpegQuality(opts.quality);
+    const backgroundColor = normalizeBackgroundColor(opts.backgroundColor);
     const log = [];
 
     // 1. Strip C2PA at byte level
@@ -314,22 +322,30 @@ export async function convertImage(inputBytes, inputMime, profile, opts = {}) {
     if (!stripped.removed) log.push('未发现 C2PA 结构,跳过剥离');
 
     // 2. Canvas re-encode → pure JPEG, all remaining metadata wiped
-    const canvas = await decodeToCanvas(stripped.bytes, inputMime);
+    const canvas = await decodeToCanvas(stripped.bytes, inputMime, backgroundColor);
     log.push(`解码成功: ${canvas.width}×${canvas.height}, 重编码为 JPEG q=${Math.round(quality*100)}`);
+    if (inputMime !== 'image/jpeg') log.push(`透明区域已合成到 ${backgroundColor} 背景`);
 
-    // 2.5 Optional watermark disruption happens here (task #8 hook)
-    if (opts.disruptWatermark && typeof opts.disruptWatermark === 'function') {
-        await opts.disruptWatermark(canvas);
-        log.push('应用像素级水印扰动');
+    const dimensions = { width: canvas.width, height: canvas.height };
+    try {
+        // 2.5 Optional watermark disruption happens here (task #8 hook)
+        if (opts.disruptWatermark && typeof opts.disruptWatermark === 'function') {
+            await opts.disruptWatermark(canvas);
+            log.push('应用像素级水印扰动');
+        }
+
+        const plainJpeg = await canvasToJpegBlob(canvas, quality);
+
+        // 3. Inject EXIF (advanced overrides honored; orientation is normalized).
+        const withExif = await injectExifIntoJpeg(plainJpeg, profile, opts.advanced);
+        log.push(`注入 EXIF: ${profile.Make} ${profile.Model};方向=1`);
+        if (opts.advanced?.dateTime) log.push(`  · 拍摄时间: ${new Date(opts.advanced.dateTime).toLocaleString('zh-CN')}`);
+        if (opts.advanced?.gps?.lat != null) log.push(`  · GPS: ${opts.advanced.gps.lat.toFixed(4)}, ${opts.advanced.gps.lon.toFixed(4)}`);
+
+        return { blob: withExif, log, dimensions, quality, backgroundColor };
+    } finally {
+        // Resetting dimensions releases the backing store sooner between batch jobs.
+        canvas.width = 1;
+        canvas.height = 1;
     }
-
-    const plainJpeg = await canvasToJpegBlob(canvas, quality);
-
-    // 3. Inject fake EXIF (advanced overrides honored)
-    const withExif = await injectExifIntoJpeg(plainJpeg, profile, opts.advanced);
-    log.push(`注入 EXIF: ${profile.Make} ${profile.Model}`);
-    if (opts.advanced?.dateTime) log.push(`  · 拍摄时间: ${new Date(opts.advanced.dateTime).toLocaleString('zh-CN')}`);
-    if (opts.advanced?.gps?.lat != null) log.push(`  · GPS: ${opts.advanced.gps.lat.toFixed(4)}, ${opts.advanced.gps.lon.toFixed(4)}`);
-
-    return { blob: withExif, log };
 }

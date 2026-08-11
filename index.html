@@ -161,6 +161,10 @@
 
         <main class="workspace" id="workspace">
             <aside class="pane pane-left">
+                <div class="app-mode-switch" id="appModeSwitch" role="tablist" aria-label="工作模式">
+                    <button class="app-mode-option active" type="button" data-app-mode="single" role="tab" aria-selected="true" data-i18n="mode.single">单张</button>
+                    <button class="app-mode-option" type="button" data-app-mode="batch" role="tab" aria-selected="false" data-i18n="mode.batch">批量</button>
+                </div>
                 <section class="upload-area" id="uploadArea">
                     <div class="upload-inner">
                         <svg class="upload-mark" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
@@ -171,7 +175,7 @@
                         <div class="upload-text" data-i18n="upload.text.html" data-i18n-html>拖拽图片到此处<br>或 <strong>点击选择</strong></div>
                         <div class="upload-hint" data-i18n="upload.hint">PNG · JPEG · WebP</div>
                     </div>
-                    <input type="file" id="fileInput" accept="image/png,image/jpeg,image/webp">
+                    <input type="file" id="fileInput" accept="image/png,image/jpeg,image/webp" multiple>
                 </section>
 
                 <section class="preview-block hidden" id="previewBlock">
@@ -206,6 +210,107 @@
                         <div class="empty-check"><span class="ec-dot"></span><span data-i18n="hero.feature.vendors">OpenAI · Google SynthID · Midjourney · SD</span></div>
                         <div class="empty-check"><span class="ec-dot"></span><span data-i18n="hero.feature.freq">65 项频域特征 + 启发式打分</span></div>
                         <div class="empty-check"><span class="ec-dot"></span><span data-i18n="hero.feature.clean">元数据清洗 / 相机 EXIF 伪装</span></div>
+                    </div>
+                </div>
+
+                <div class="batch-view hidden" id="batchView">
+                    <div class="batch-head">
+                        <div>
+                            <span class="eyebrow" data-i18n="batch.eyebrow">批量任务</span>
+                            <h1 class="batch-title" data-i18n="batch.title">本地批量处理</h1>
+                        </div>
+                        <div class="batch-summary" id="batchSummary">0 / 0</div>
+                    </div>
+
+                    <div class="batch-control-band">
+                        <div class="batch-control-row">
+                            <div class="batch-segment" id="batchOperation" role="tablist" aria-label="任务类型">
+                                <button class="active batch-lock-while-running" type="button" data-batch-operation="detect" role="tab" aria-selected="true" data-i18n="batch.operation.detect">检测</button>
+                                <button class="batch-lock-while-running" type="button" data-batch-operation="convert" role="tab" aria-selected="false" data-i18n="batch.operation.convert">转换</button>
+                            </div>
+                            <div class="batch-segment" id="batchDetectMode" role="tablist" aria-label="检测深度">
+                                <button class="active batch-lock-while-running" type="button" data-batch-detect-mode="quick" role="tab" aria-selected="true" data-i18n="batch.mode.quick">快速</button>
+                                <button class="batch-lock-while-running" type="button" data-batch-detect-mode="full" role="tab" aria-selected="false" data-i18n="batch.mode.full">完整</button>
+                            </div>
+                            <button class="btn-primary batch-add" id="btnBatchAdd" type="button">
+                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                                <span data-i18n="batch.add">添加图片</span>
+                            </button>
+                        </div>
+
+                        <div class="batch-convert-settings hidden" id="batchConvertSettings">
+                            <div class="batch-setting-grid">
+                                <label class="batch-field batch-field-wide">
+                                    <span data-i18n="batch.camera">相机配置</span>
+                                    <select id="batchCamera" class="batch-lock-while-running"></select>
+                                </label>
+                                <label class="batch-field">
+                                    <span data-i18n="conv.preset">预设</span>
+                                    <select id="batchPreset" class="batch-lock-while-running">
+                                        <option value="light" data-i18n="conv.preset.light">轻量</option>
+                                        <option value="rec" selected data-i18n="conv.preset.rec">推荐</option>
+                                        <option value="strong" data-i18n="conv.preset.strong">强力</option>
+                                        <option value="ultra" data-i18n="conv.preset.ultra">极限</option>
+                                    </select>
+                                </label>
+                                <label class="batch-field">
+                                    <span data-i18n="conv.intensity">强度</span>
+                                    <input id="batchIntensity" class="batch-lock-while-running" type="number" min="1" max="5" value="3">
+                                </label>
+                                <label class="batch-field">
+                                    <span data-i18n="batch.quality">JPEG 质量</span>
+                                    <select id="batchQuality" class="batch-lock-while-running">
+                                        <option value="random" data-i18n="batch.quality.random">随机 88-95</option>
+                                        <option value="0.95">95</option>
+                                        <option value="0.92">92</option>
+                                        <option value="0.88">88</option>
+                                    </select>
+                                </label>
+                                <label class="batch-check">
+                                    <input id="batchDisrupt" class="batch-lock-while-running" type="checkbox">
+                                    <span data-i18n="conv.wm.toggle">扰动像素级隐形水印</span>
+                                </label>
+                            </div>
+
+                            <details class="batch-advanced">
+                                <summary><span data-i18n="batch.advanced">高级 EXIF</span></summary>
+                                <div class="batch-setting-grid">
+                                    <label class="batch-field"><span data-i18n="conv.adv.date">拍摄时间</span><select id="batchDate" class="batch-lock-while-running"><option value="now" data-i18n="conv.adv.date.now">现在</option><option value="-1d" data-i18n="conv.adv.date.1d">1 天前</option><option value="-7d" data-i18n="conv.adv.date.7d">1 周前</option><option value="-30d" data-i18n="conv.adv.date.30d">1 个月前</option></select></label>
+                                    <label class="batch-field"><span data-i18n="conv.adv.gps">地理位置</span><select id="batchGps" class="batch-lock-while-running"></select></label>
+                                    <label class="batch-field"><span data-i18n="conv.adv.iso">ISO</span><input id="batchIso" class="batch-lock-while-running" type="number" min="25" max="102400"></label>
+                                    <label class="batch-field"><span data-i18n="conv.adv.fnum">光圈 f/</span><input id="batchFNumber" class="batch-lock-while-running" type="number" min="0.9" max="32" step="0.1"></label>
+                                    <label class="batch-field"><span data-i18n="conv.adv.shutter">快门 1/…</span><input id="batchShutter" class="batch-lock-while-running" type="number" min="1" max="8000"></label>
+                                </div>
+                            </details>
+                        </div>
+                    </div>
+
+                    <div class="batch-actions">
+                        <button class="btn-secondary" id="btnBatchCancel" type="button" disabled data-i18n="batch.cancel">取消</button>
+                        <button class="btn-secondary" id="btnBatchClear" type="button" disabled data-i18n="batch.clear">清除已结束</button>
+                        <span class="batch-actions-spacer"></span>
+                        <button class="btn-secondary" id="btnBatchCsv" type="button" disabled>CSV</button>
+                        <button class="btn-secondary" id="btnBatchJson" type="button" disabled>JSON</button>
+                        <button class="btn-secondary" id="btnBatchZip" type="button" disabled>
+                            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14"/></svg>
+                            <span data-i18n="batch.zip">下载 ZIP</span>
+                        </button>
+                    </div>
+
+                    <div class="batch-progress" aria-hidden="true"><span id="batchProgressBar"></span></div>
+                    <div class="batch-message hidden" id="batchMessage"></div>
+                    <div class="batch-empty" id="batchEmpty" data-i18n="batch.empty">暂无任务</div>
+                    <div class="batch-table-wrap hidden" id="batchTableWrap">
+                        <table class="batch-table">
+                            <thead><tr>
+                                <th data-i18n="batch.col.file">文件</th>
+                                <th data-i18n="batch.col.task">任务</th>
+                                <th data-i18n="batch.col.status">状态</th>
+                                <th data-i18n="batch.col.result">结果</th>
+                                <th data-i18n="batch.col.action">操作</th>
+                            </tr></thead>
+                            <tbody id="batchRows"></tbody>
+                        </table>
                     </div>
                 </div>
 
@@ -343,15 +448,6 @@
                                 <div class="adv-field">
                                     <label class="adv-label" data-i18n="conv.adv.gps">地理位置</label>
                                     <select id="advGps"></select>
-                                </div>
-                                <div class="adv-field">
-                                    <label class="adv-label" data-i18n="conv.adv.orient">方向</label>
-                                    <select id="advOrientation">
-                                        <option value="1" data-i18n="conv.adv.orient.1">1 · 正常</option>
-                                        <option value="6" data-i18n="conv.adv.orient.6">6 · 顺时针 90°</option>
-                                        <option value="8" data-i18n="conv.adv.orient.8">8 · 逆时针 90°</option>
-                                        <option value="3" data-i18n="conv.adv.orient.3">3 · 180°</option>
-                                    </select>
                                 </div>
                                 <div class="adv-field">
                                     <label class="adv-label" data-i18n="conv.adv.quality">JPEG 质量</label>
