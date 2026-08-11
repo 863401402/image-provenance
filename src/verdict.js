@@ -2,7 +2,7 @@
 // metadata as proof that an image is camera-original.
 
 export function classifyEvidence(detections = [], frequencyScore) {
-    const aiDetections = detections.filter(d => d.category !== 'edit');
+    const aiDetections = detections.filter(d => d.category !== 'edit' && d.aiEvidence !== false);
     const provenanceHits = aiDetections.filter(d => d.hit
         && (d.confidence === 'strong' || d.confidence === 'medium'));
     const weakHits = aiDetections.filter(d => d.hit && d.confidence === 'weak');
@@ -10,6 +10,7 @@ export function classifyEvidence(detections = [], frequencyScore) {
 
     if (provenanceHits.length > 0) return { kind: 'provenance', provenanceHits };
     if (frequencyScore === undefined) return { kind: 'pending' };
+    if (frequencyScore?.applicable === false) return { kind: 'unsuitable' };
     if (frequencyScore && (frequencyScore.confidence === 'strong'
         || frequencyScore.confidence === 'medium')) {
         return { kind: 'pixel', frequencyScore };

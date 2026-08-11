@@ -5,6 +5,8 @@ import { bytesToString } from './utils.js';
 import { parseMetadata, sniffJumbf, getGenerationHints } from './metadata.js';
 import { detectWatermarkFFT } from './watermark-detect.js';
 import { MARKERS } from './markers.js';
+import { verifyC2pa, isAiSourceType } from './c2pa-verify.js';
+import { t } from './i18n.js';
 
 function findWithContext(str, keywords) {
     const results = [];
@@ -39,40 +41,72 @@ function card(title, hit, badgeText, desc, detail, confidence) {
     };
 }
 
-export async function runAllDetections(uint8) {
+export async function runAllDetections(uint8, { mime = 'image/jpeg' } = {}) {
     const str = bytesToString(uint8);
-    const [meta, jumbf] = await Promise.all([parseMetadata(uint8), Promise.resolve(sniffJumbf(uint8))]);
+    const jumbf = sniffJumbf(uint8);
+    const [meta, c2pa] = await Promise.all([
+        parseMetadata(uint8),
+        jumbf.present ? verifyC2pa(uint8, mime) : Promise.resolve({ status: 'absent', present: false }),
+    ]);
     const detections = [];
 
     // --- 1. C2PA (structured: JUMBF box + DigitalSourceType) ---
     {
         const m = MARKERS.find(x => x.id === 'c2pa');
         const found = findWithContext(str, m.keywords);
-        const hit = jumbf.present || found.length > 0;
-        const aiType = jumbf.digitalSourceType && ['trainedAlgorithmicMedia',
-            'compositeWithTrainedAlgorithmicMedia', 'algorithmicMedia', 'dataDrivenMedia']
-            .includes(jumbf.digitalSourceType);
-        let badgeText, desc, confidence;
-        if (aiType) {
-            badgeText = `C2PA 声明为 AI 生成 (${jumbf.digitalSourceType})`;
-            desc = '图片嵌入了 C2PA 来源凭证,并明确声明为算法生成内容。';
+        const sourceType = c2pa.digitalSourceType || jumbf.digitalSourceType;
+        const verifiedAi = c2pa.verified && isAiSourceType(sourceType);
+        const hit = c2pa.present || jumbf.present || found.length > 0;
+        let badgeText, desc, confidence, badgeClass;
+        if (verifiedAi) {
+            badgeText = t('badge.c2pa.aiVerified', { state: c2pa.state, source: sourceType });
+            desc = t('det.desc.c2pa.aiVerified');
             confidence = 'strong';
+            badgeClass = 'badge-hit';
+        } else if (c2pa.invalid) {
+            badgeText = t('badge.c2pa.invalid');
+            desc = t('det.desc.c2pa.invalid');
+            confidence = 'info';
+            badgeClass = 'badge-hit';
+        } else if (c2pa.verified) {
+            badgeText = t('badge.c2pa.verified', { state: c2pa.state });
+            desc = t('det.desc.c2pa.verified');
+            confidence = 'info';
+            badgeClass = 'badge-clean';
         } else if (jumbf.present) {
-            badgeText = `C2PA 存在 (${jumbf.digitalSourceType || '来源未声明'})`;
-            desc = '图片嵌入了 C2PA 来源凭证。' + (jumbf.labels.length ? ` Labels: ${jumbf.labels.join(', ')}` : '');
-            confidence = 'strong';
-        } else if (found.length > 0) {
-            badgeText = '字节中含 C2PA 字符串';
-            desc = '文件字节中出现 C2PA 相关字符串,但未发现完整 JUMBF 结构。';
+            badgeText = t('badge.c2pa.structure');
+            desc = t('det.desc.c2pa.structure');
             confidence = 'weak';
+            badgeClass = 'badge-uncertain';
+        } else if (found.length > 0) {
+            badgeText = t('badge.bytesC2PA');
+            desc = t('det.desc.c2pa.bytes');
+            confidence = 'weak';
+            badgeClass = 'badge-uncertain';
         } else {
-            badgeText = '未发现';
+            badgeText = t('badge.notfound');
             desc = m.missDesc;
+            badgeClass = 'badge-clean';
         }
         const details = [];
-        if (jumbf.present) details.push(`JUMBF boxes: ${jumbf.indices.length}  |  labels: ${jumbf.labels.join(', ') || '-'}  |  DigitalSourceType: ${jumbf.digitalSourceType || '-'}`);
+        if (jumbf.present) details.push(`JUMBF boxes: ${jumbf.indices.length}  |  labels: ${jumbf.labels.join(', ') || '-'}`);
+        if (c2pa.present) {
+            details.push([
+                `Validation state: ${c2pa.state || c2pa.status}`,
+                `DigitalSourceType: ${sourceType || '-'}`,
+                `Claim generator: ${c2pa.claimGenerator || '-'}`,
+                `Active manifest: ${c2pa.activeLabel || '-'}`,
+                `Success: ${(c2pa.success || []).map(s => s.code).join(', ') || '-'}`,
+                `Failures: ${(c2pa.failure || []).map(s => s.code).join(', ') || '-'}`,
+            ].join('\n'));
+        }
         if (found.length) details.push(detailOf(found));
-        detections.push(card(m.title, hit, badgeText, desc, details.join('\n\n') || null, confidence));
+        detections.push({
+            ...card(m.title, hit, badgeText, desc, details.join('\n\n') || null, confidence),
+            badgeClass,
+            category: 'provenance',
+            aiEvidence: verifiedAi,
+        });
     }
 
     // --- 2. Structured metadata (EXIF/XMP/IPTC/ICC via exifr) ---
@@ -128,5 +162,13 @@ export async function runAllDetections(uint8) {
         ));
     }
 
-    return { detections, meta, jumbf };
+    return {
+        detections,
+        meta,
+        jumbf: {
+            ...jumbf,
+            digitalSourceType: c2pa.digitalSourceType || jumbf.digitalSourceType,
+            verification: c2pa,
+        },
+    };
 }

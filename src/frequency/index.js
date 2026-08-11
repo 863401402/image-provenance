@@ -19,11 +19,32 @@ function nearestPow2(n) {
     return 1 << Math.floor(Math.log2(Math.max(n, 2)));
 }
 
+async function containsQrCode(bitmap) {
+    if (!globalThis.BarcodeDetector) return false;
+    try {
+        const formats = await BarcodeDetector.getSupportedFormats?.();
+        if (formats && !formats.includes('qr_code')) return false;
+        const results = await new BarcodeDetector({ formats: ['qr_code'] }).detect(bitmap);
+        return results.length > 0;
+    } catch {
+        return false;
+    }
+}
+
 export async function analyzeFrequency(bytes, mime, opts = {}) {
     const onProgress = opts.onProgress || (() => {});
     const blob = new Blob([bytes], { type: mime });
     const bitmap = await createImageBitmap(blob);
     try {
+        if (await containsQrCode(bitmap)) {
+            return {
+                skipped: true,
+                suitability: { suitable: false, reasons: ['qrCode'], metrics: {} },
+                score: { applicable: false, confidence: null, total: 0, positive: 0, negative: 0, votes: [] },
+                timing: { features: 0, score: 0 },
+                side: null,
+            };
+        }
         const isMobile = /Mobi|Android/i.test(navigator.userAgent);
         const side = nearestPow2(Math.min(pickSize(bitmap.width, bitmap.height, isMobile),
                                           Math.max(bitmap.width, bitmap.height)));

@@ -236,6 +236,7 @@ const SUMMARY_KEYS = {
     uncertain: ['result.uncertain', 'result.uncertainSub', 'badge.uncertain', 'badge-uncertain'],
     edit: ['result.aiClean', 'result.editSub', 'badge.noEvidence', 'badge-uncertain'],
     none: ['result.aiClean', 'result.cleanSub', 'badge.noEvidence', 'badge-uncertain'],
+    unsuitable: ['result.unsuitable', 'result.unsuitableSub', 'badge.unsuitable', 'badge-uncertain'],
     pending: ['result.aiClean', 'result.pixelAnalyzing', 'badge.analyzing', 'badge-uncertain'],
 };
 
@@ -370,8 +371,10 @@ async function handleFile(file) {
         }, 420);
 
         const { detections } = await runStep(analysisLog, t('log.markers'), async () => {
-            const res = await runAllDetections(uint8);
+            const res = await runAllDetections(uint8, { mime: file.type || 'image/jpeg' });
+            currentJumbf = res.jumbf;
             const hits = res.detections.filter(d => d.hit && d.category !== 'edit'
+                && d.aiEvidence !== false
                 && (d.confidence === 'strong' || d.confidence === 'medium')).length;
             return { value: res, detail: hits ? t('log.hits', { n: hits }) : t('log.allNeg') };
         }, 360, 'done');

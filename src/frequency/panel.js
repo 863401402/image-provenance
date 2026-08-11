@@ -12,6 +12,31 @@ function verdictText(score) {
 
 export function renderFrequencyPanel(container, result) {
     const { features, viz, score, timing, side } = result;
+    if (result.suitability?.suitable === false) {
+        const reasons = result.suitability.reasons
+            .map(reason => t(`freq.unsuitable.reason.${reason}`));
+        const metrics = result.suitability.metrics || {};
+        const metricText = Object.keys(metrics).length ? `
+            <details class="freq-features">
+                <summary>${escHtml(t('freq.unsuitable.metrics'))}</summary>
+                <table class="freq-table">
+                    ${Object.entries(metrics).map(([key, value]) => `
+                        <tr><td>${escHtml(key)}</td><td>${Number(value).toFixed(4)}</td></tr>`).join('')}
+                </table>
+            </details>` : '';
+        container.innerHTML = `
+            <div class="freq-disclaimer">
+                <span class="freq-disclaimer-tag">${escHtml(t('freq.disclaimer.tag'))}</span>
+                <span>${escHtml(t('freq.disclaimer.text'))}</span>
+            </div>
+            <div class="freq-unsuitable">
+                <h3>${escHtml(t('freq.unsuitable.title'))}</h3>
+                <p>${escHtml(t('freq.unsuitable.text'))}</p>
+                <ul>${reasons.map(reason => `<li>${escHtml(reason)}</li>`).join('')}</ul>
+            </div>
+            ${metricText}`;
+        return;
+    }
     container.innerHTML = `
         <div class="freq-disclaimer">
             <span class="freq-disclaimer-tag">${escHtml(t('freq.disclaimer.tag'))}</span>

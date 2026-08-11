@@ -10,6 +10,13 @@ test('provenance evidence takes priority over pixel heuristics', () => {
     assert.equal(result.kind, 'provenance');
 });
 
+test('unverified C2PA structure is not treated as AI evidence', () => {
+    const result = classifyEvidence([
+        { hit: true, confidence: 'strong', category: 'provenance', aiEvidence: false },
+    ], { confidence: 'info' });
+    assert.equal(result.kind, 'none');
+});
+
 test('strong and medium frequency scores surface stripped-image evidence', () => {
     assert.equal(classifyEvidence([], { confidence: 'strong' }).kind, 'pixel');
     assert.equal(classifyEvidence([], { confidence: 'medium' }).kind, 'pixel');
@@ -27,4 +34,8 @@ test('missing evidence is not labeled clean', () => {
 
 test('pending pixel analysis has a distinct state', () => {
     assert.equal(classifyEvidence([]).kind, 'pending');
+});
+
+test('unsuitable pixel content does not receive an AI verdict', () => {
+    assert.equal(classifyEvidence([], { applicable: false, confidence: 'strong' }).kind, 'unsuitable');
 });

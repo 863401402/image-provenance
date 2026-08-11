@@ -38,6 +38,8 @@ const STRINGS = {
     'result.uncertain':     { zh: '存在可疑线索',                                                      en: 'Inconclusive signals found' },
     'result.uncertainSub':  { zh: '仅发现弱线索,不足以判断图片是否由 AI 生成。',                       en: 'Only weak signals were found, which is insufficient to determine whether the image is AI-generated.' },
     'result.pixelAnalyzing':{ zh: '未发现来源标记,正在继续分析像素特征。',                             en: 'No provenance markers found; continuing with pixel analysis.' },
+    'result.unsuitable':    { zh: '不适合频域 AI 判断',                                                en: 'Not suitable for frequency AI analysis' },
+    'result.unsuitableSub': { zh: '图片更接近二维码、文档、截图或低纹理图;此类内容容易误报,因此不输出 AI 得分。', en: 'This resembles a QR code, document, screenshot, or low-texture graphic; these often cause false positives, so no AI score is shown.' },
     'result.weakSub':       { zh: '未检出元数据声明的 AI 标记;仅有字节级启发性异常,不足以判定。',     en: 'No metadata-level AI markers detected; only weak byte-level anomalies — insufficient to conclude.' },
     'result.editSub':       { zh: '未检出 AI 生成标记,但图片经过修图软件处理。',                       en: 'No AI markers detected, but the image has been touched by editing software.' },
     'result.cleanSub':      { zh: '未发现明确证据;这不能证明图片一定不是 AI 生成。',                   en: 'No clear evidence was found; this does not prove the image is not AI-generated.' },
@@ -47,11 +49,16 @@ const STRINGS = {
     'badge.uncertain':      { zh: '无法确定',                                                          en: 'Inconclusive' },
     'badge.noEvidence':     { zh: '无明确证据',                                                        en: 'No clear evidence' },
     'badge.analyzing':      { zh: '分析中',                                                            en: 'Analyzing' },
+    'badge.unsuitable':     { zh: '不适用',                                                            en: 'Not applicable' },
     'badge.found':          { zh: '发现',                                                              en: 'Found' },
     'badge.notfound':       { zh: '未发现',                                                            en: 'Not found' },
     'badge.foundEdit':      { zh: '发现修图痕迹',                                                      en: 'Edit traces' },
     'badge.foundMarker':    { zh: '发现标记',                                                          en: 'Marker found' },
     'badge.bytesC2PA':      { zh: '字节中含 C2PA 字符串',                                              en: 'C2PA string in bytes' },
+    'badge.c2pa.aiVerified':{ zh: 'AI 声明已验证 (${state})',                                          en: 'AI claim verified (${state})' },
+    'badge.c2pa.verified':  { zh: '凭证已验证 (${state})',                                             en: 'Credential verified (${state})' },
+    'badge.c2pa.invalid':   { zh: '凭证验证失败',                                                       en: 'Credential invalid' },
+    'badge.c2pa.structure': { zh: '发现结构,未通过验证',                                               en: 'Structure found, not verified' },
     'badge.metadataAI':     { zh: '元数据命中 AI 生成工具',                                            en: 'Metadata names an AI tool' },
     'badge.metadataYes':    { zh: '存在元数据,但未命中 AI',                                           en: 'Metadata present, no AI marker' },
     'badge.metadataNone':   { zh: '无可读元数据',                                                      en: 'No readable metadata' },
@@ -66,6 +73,10 @@ const STRINGS = {
     'det.detail.viewMore':  { zh: '查看详情',                                                          en: 'View details' },
     'det.title.c2pa':       { zh: 'C2PA / Content Credentials',                                       en: 'C2PA / Content Credentials' },
     'det.desc.c2pa.aiType': { zh: '图片嵌入了 C2PA 来源凭证,并明确声明为算法生成内容。',              en: 'Image embeds a C2PA credential explicitly declaring algorithmic generation.' },
+    'det.desc.c2pa.aiVerified':{ zh: 'C2PA 签名和资源哈希验证通过,且凭证明确定义为算法生成内容。',     en: 'The C2PA signature and asset hash validate, and the credential declares algorithmic generation.' },
+    'det.desc.c2pa.verified':{ zh: 'C2PA 签名和资源哈希验证通过;该凭证本身未声明图片由 AI 生成。',      en: 'The C2PA signature and asset hash validate; the credential does not itself declare AI generation.' },
+    'det.desc.c2pa.invalid':{ zh: '发现 C2PA 容器,但签名、资源哈希或凭证结构验证失败。',                en: 'A C2PA container was found, but its signature, asset hash, or credential structure failed validation.' },
+    'det.desc.c2pa.structure':{ zh: '发现 C2PA/JUMBF 结构,但没有得到可验证的有效凭证。',                en: 'A C2PA/JUMBF structure was found, but no verifiable valid credential was produced.' },
     'det.desc.c2pa.present':{ zh: '图片嵌入了 C2PA 来源凭证。',                                        en: 'Image embeds a C2PA credential.' },
     'det.desc.c2pa.bytes':  { zh: '文件字节中出现 C2PA 相关字符串,但未发现完整 JUMBF 结构。',         en: 'C2PA-related strings present in bytes, but no full JUMBF structure.' },
     'det.desc.c2pa.none':   { zh: '没有在字节中找到 C2PA/JUMBF 线索。',                                en: 'No C2PA / JUMBF traces in the bytes.' },
@@ -129,6 +140,13 @@ const STRINGS = {
     'freq.verdict.real':    { zh: '更接近真实照片',                                                     en: 'Closer to a real photo' },
     'freq.verdict.unsure':  { zh: '特征模糊,无法判定',                                                 en: 'Inconclusive features' },
     'freq.err':             { zh: '频域分析失败: ${msg}',                                               en: 'Frequency analysis failed: ${msg}' },
+    'freq.unsuitable.title':{ zh: '此图片不适合频域 AI 判断',                                           en: 'This image is not suitable for frequency AI analysis' },
+    'freq.unsuitable.text': { zh: '频域规则主要针对自然照片。为避免高置信度误报,本次分析已停止输出 AI 倾向分数。', en: 'The frequency rules target photographic content. To avoid a high-confidence false positive, no AI-likelihood score is produced.' },
+    'freq.unsuitable.reason.qrCode':{ zh: '检测到可解码的二维码。',                                     en: 'A decodable QR code was detected.' },
+    'freq.unsuitable.reason.qrOrDocument':{ zh: '图像以高对比黑白区域和规则边缘为主,更接近二维码或文档。', en: 'The image is dominated by high-contrast binary regions and regular edges, resembling a QR code or document.' },
+    'freq.unsuitable.reason.lowTexture':{ zh: '图像纹理和亮度变化过低,缺少可供照片模型判断的自然细节。', en: 'Texture and luminance variation are too low for a photo-oriented model.' },
+    'freq.unsuitable.reason.graphicOrScreenshot':{ zh: '图像包含大面积平坦区域和锐利界面边缘,更接近插画或截图。', en: 'Large flat regions and sharp interface edges make this resemble a graphic or screenshot.' },
+    'freq.unsuitable.metrics':{ zh: '适用性指标',                                                        en: 'Suitability metrics' },
 
     // Convert tab
     'conv.sub':             { zh: '剥离 C2PA / AI 标记,重编码并注入相机 EXIF,让图片看起来像真实相机拍的。', en: 'Strip C2PA / AI markers, re-encode, and inject camera EXIF so the image looks camera-native.' },
@@ -291,7 +309,7 @@ export function t(key, vars) {
     const entry = STRINGS[key];
     if (!entry) return key;
     let s = entry[lang] ?? entry.zh ?? key;
-    if (vars) for (const k in vars) s = s.replace('${' + k + '}', vars[k]);
+    if (vars) for (const k in vars) s = s.replaceAll('${' + k + '}', vars[k]);
     return s;
 }
 

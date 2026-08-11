@@ -148,8 +148,12 @@ export function renderMetadataPanel(container, ctx) {
     // ---- C2PA ----
     let c2paHtml = '';
     if (jumbf.present) {
+        const verification = jumbf.verification || {};
         const c2paRows = [
+            row('Validation', verification.state || verification.status || '未验证'),
             row('DigitalSourceType', jumbf.digitalSourceType || '未声明'),
+            row('Claim generator', verification.claimGenerator || '—'),
+            row('Failures', (verification.failure || []).map(s => s.code).join(', ') || '—'),
             row('JUMBF boxes', jumbf.indices.length),
             row('Labels', jumbf.labels.join(', ') || '—'),
         ];
@@ -192,10 +196,11 @@ function analyzeVerdict(m, jumbf) {
     const hasCaptureParams = m.FNumber && m.ExposureTime && (m.ISO || m.ISOSpeedRatings);
     const hasGps = m.latitude != null || m.GPSLatitude != null;
     const hasMakerNote = !!(m.MakerNote || m.makerNote);
-    const c2paAi = jumbf?.digitalSourceType && ['trainedAlgorithmicMedia',
+    const c2paVerified = jumbf?.verification?.verified === true;
+    const c2paAi = c2paVerified && jumbf?.digitalSourceType && ['trainedAlgorithmicMedia',
         'compositeWithTrainedAlgorithmicMedia', 'algorithmicMedia', 'dataDrivenMedia']
         .includes(jumbf.digitalSourceType);
-    const c2paReal = jumbf?.digitalSourceType === 'digitalCapture';
+    const c2paReal = c2paVerified && jumbf?.digitalSourceType === 'digitalCapture';
     const softIsAi = /Midjourney|Stable|Diffusion|ComfyUI|DALL|OpenAI|Firefly|Gemini|Imagen/i.test(m.Software || '');
 
     if (c2paAi || softIsAi) {
@@ -204,7 +209,7 @@ function analyzeVerdict(m, jumbf) {
     }
     if (c2paReal) {
         return { level: 'strong', icon: '📸', title: '相机原生 C2PA 凭证',
-            sub: `C2PA DigitalSourceType = digitalCapture · 设备厂商签名可验证` };
+            sub: `C2PA DigitalSourceType = digitalCapture · 签名和资源哈希验证通过` };
     }
     let realScore = 0;
     if (hasCamera) realScore++;

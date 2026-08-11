@@ -7,6 +7,7 @@
 import { extractFeatures } from './features.js';
 import { scoreFeatures } from './score.js';
 import { downsampleMag, radialSpectrum, magnitudeShifted } from './transforms.js';
+import { assessPixelSuitability } from './suitability.js';
 
 self.onmessage = (e) => {
     const { type } = e.data;
@@ -20,8 +21,10 @@ self.onmessage = (e) => {
         const { features, viz } = extractFeatures(rgba, gray, w, h);
         timing.features = performance.now() - t0;
 
+        const suitability = assessPixelSuitability(rgba, gray, w, h);
+
         self.postMessage({ type: 'progress', stage: 'score', pct: 85 });
-        const score = scoreFeatures(features);
+        const score = { ...scoreFeatures(features), applicable: suitability.suitable };
         timing.score = performance.now() - t0 - timing.features;
 
         // Build small transferable viz payloads (don't ship full 1024² FFT back).
@@ -45,7 +48,7 @@ self.onmessage = (e) => {
         };
 
         self.postMessage({
-            type: 'result', features, viz: vizOut, score, timing,
+            type: 'result', features, viz: vizOut, score, timing, suitability,
         }, [vizOut.fftMag128.buffer, vizOut.radial64.buffer]);
     } catch (err) {
         self.postMessage({ type: 'error', message: err?.message || String(err), stack: err?.stack });
