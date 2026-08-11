@@ -985,9 +985,7 @@ a:hover { color: var(--text-muted); }
     margin-top: 8px;
 }
 .community-qr {
-    /* Bigger box so the QR itself lands at ~150px after cropping into the
-     * middle portion of the WeChat invite image (1080x1596 — QR is center,
-     * occupies ~40% height). */
+    /* Crop the portrait WeChat contact card around its QR region. */
     width: 188px; height: 188px; flex-shrink: 0;
     border-radius: var(--radius-md);
     overflow: hidden;
@@ -1001,7 +999,8 @@ a:hover { color: var(--text-muted); }
 .community-qr:hover { transform: scale(1.02); box-shadow: var(--shadow-md); }
 .community-qr img {
     position: absolute;
-    top: 33%;
+    /* The QR center is at y=759 in the 958x1415 source image. */
+    top: 44%;
     left: 50%;
     transform: translate(-50%, -50%);
     width: 120%;
