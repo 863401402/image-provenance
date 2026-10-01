@@ -27,7 +27,7 @@ initStats();
 let selectedProfile = 'iphone17promax';
 let currentFile = null;
 let currentBytes = null;
-let currentMeta = null, currentJumbf = null;
+let currentMeta = null, currentJumbf = null, currentAigc = null;
 let lastFreqBytes = null, lastFreqResult = null;
 let currentDetections = [];
 let currentFrequencyScore;
@@ -281,6 +281,9 @@ async function handleFile(file) {
     lastFreqBytes = null; lastFreqResult = null;
     currentDetections = [];
     currentFrequencyScore = undefined;
+    currentMeta = null; currentJumbf = null; currentAigc = null;
+    document.getElementById('metadataPanel').innerHTML = '';
+    document.getElementById('metadataPanel')._pending = false;
 
     // Reset UI to reveal result view
     emptyState.classList.add('hidden');
@@ -362,6 +365,8 @@ async function handleFile(file) {
         const { detections } = await runStep(analysisLog, t('log.markers'), async () => {
             const res = await runAllDetections(uint8, { mime: file.type || 'image/jpeg' });
             currentJumbf = res.jumbf;
+            currentMeta = res.meta;
+            currentAigc = res.aigc;
             const hits = res.detections.filter(d => d.hit && d.category !== 'edit'
                 && d.aiEvidence !== false
                 && (d.confidence === 'strong' || d.confidence === 'medium')).length;
@@ -431,7 +436,7 @@ document.addEventListener('click', (ev) => {
         const panel = document.getElementById('metadataPanel');
         if (panel._pending && currentMeta) {
             renderMetadataPanel(panel, {
-                meta: currentMeta, jumbf: currentJumbf,
+                meta: currentMeta, jumbf: currentJumbf, aigc: currentAigc,
                 file: currentFile, dims: document.getElementById('fileDims').textContent,
             });
             panel._pending = false;
@@ -540,7 +545,7 @@ document.addEventListener('langchange', () => {
     const mp = document.getElementById('metadataPanel');
     if (mp && mp.innerHTML && currentMeta) {
         renderMetadataPanel(mp, {
-            meta: currentMeta, jumbf: currentJumbf,
+            meta: currentMeta, jumbf: currentJumbf, aigc: currentAigc,
             file: currentFile, dims: document.getElementById('fileDims').textContent,
         });
     }

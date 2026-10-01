@@ -61,3 +61,20 @@ test('CSV neutralizes spreadsheet formulas in user-controlled fields', () => {
     }]);
     assert.match(csv, /"'=HYPERLINK\(""https:\/\/example\.invalid""\)"/);
 });
+
+test('batch exports retain all AIGC records, declaration levels and conflict warnings', () => {
+    const aigc = { status: 'conflict', declaration: null, confidence: 'weak', verified: false,
+        labels: [{ fields: { Label: '1', ContentProducer: '=untrusted-provider', ProduceID: 'image-1',
+            ContentPropagator: 'example-platform', PropagateID: 'post-1' }, sources: ['jpeg.APP1.XMP'] },
+        { fields: { Label: '3', ContentProducer: 'another-provider', ProduceID: 'image-2' }, sources: ['png.tEXt'] }],
+        warnings: ['metadata.limit'] };
+    const input = [{ report: { file: { name: 'sample.jpg' }, verdict: 'uncertain', aigc } }];
+    const json = JSON.parse(serializeBatchJson(input));
+    assert.deepEqual(json.items[0].aigc, aigc);
+    assert.equal(json.items[0].aigcStatus, 'conflict');
+    const csv = serializeBatchCsv(input);
+    assert.match(csv, /AIGC labels \(JSON\)/);
+    assert.match(csv, /example-platform/);
+    assert.match(csv, /another-provider/);
+    assert.match(csv, /metadata.limit/);
+});

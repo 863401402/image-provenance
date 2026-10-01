@@ -1,4 +1,4 @@
-// Metadata tab — shows all the "this is a real photo" info exifr extracted.
+// Metadata tab — shows editable metadata and the provenance evidence behind it.
 // Categories:
 //   1. Verdict (real-photo signals vs AI signals)
 //   2. Camera & lens
@@ -10,6 +10,8 @@
 //   8. Raw dump (collapsible)
 
 import { escHtml } from './utils.js';
+import { t, getLang } from './i18n.js';
+import { analyzeMetadataEvidence, normalizeGpsCoordinate } from './metadata-evidence.js';
 
 function fmtExposure(t) {
     if (t == null) return null;
@@ -57,177 +59,148 @@ export function renderMetadataPanel(container, ctx) {
     const hasAny = Object.keys(m).filter(k => !k.startsWith('_')).length > 0;
 
     // ---- Verdict strip ----
-    const signals = analyzeVerdict(m, jumbf);
+    const signals = analyzeMetadataEvidence(m, jumbf, ctx.aigc);
     const verdictHtml = `
         <section class="md-verdict md-verdict-${signals.level}">
             <div class="md-verdict-icon">${signals.icon}</div>
             <div class="md-verdict-text">
-                <div class="md-verdict-title">${escHtml(signals.title)}</div>
-                <div class="md-verdict-sub">${escHtml(signals.sub)}</div>
+                <div class="md-verdict-title">${escHtml(t(signals.titleKey))}</div>
+                <div class="md-verdict-sub">${escHtml(t(signals.subKey))}</div>
             </div>
         </section>`;
 
     // ---- Camera ----
     const cameraRows = [
-        row('品牌', m.Make),
-        row('型号', m.Model),
+        row(t('meta.brand'), m.Make),
+        row(t('meta.model'), m.Model),
         row('固件', m.Software),
-        row('镜头', m.LensModel || m.Lens),
-        row('镜头厂', m.LensMake),
-        row('镜头序列号', m.LensSerialNumber),
-        row('机身序列号', m.BodySerialNumber || m.SerialNumber),
-        row('所有者', m.OwnerName || m.Artist),
+        row(t('meta.lens'), m.LensModel || m.Lens),
+        row(t('meta.lensMake'), m.LensMake),
+        row(t('meta.lensSerial'), m.LensSerialNumber),
+        row(t('meta.bodySerial'), m.BodySerialNumber || m.SerialNumber),
+        row(t('meta.owner'), m.OwnerName || m.Artist),
     ];
 
     // ---- Capture params ----
     const captureRows = [
-        row('光圈', m.FNumber ? `f/${m.FNumber}` : null),
-        row('快门', fmtExposure(m.ExposureTime)),
+        row(t('meta.aperture'), m.FNumber ? `f/${m.FNumber}` : null),
+        row(t('meta.shutter'), fmtExposure(m.ExposureTime)),
         row('ISO', m.ISO || m.ISOSpeedRatings),
-        row('焦距', m.FocalLength ? `${m.FocalLength}mm` : null),
-        row('等效焦距', m.FocalLengthIn35mmFormat ? `${m.FocalLengthIn35mmFormat}mm (35mm)` : null),
-        row('曝光补偿', m.ExposureCompensation != null ? `${m.ExposureCompensation > 0 ? '+' : ''}${m.ExposureCompensation} EV` : null),
-        row('曝光程序', m.ExposureProgram),
-        row('测光模式', m.MeteringMode),
-        row('白平衡', m.WhiteBalance),
-        row('闪光灯', typeof m.Flash === 'string' ? m.Flash : m.Flash != null ? (m.Flash === 0 ? '未闪光' : '已闪光') : null),
+        row(t('meta.focal'), m.FocalLength ? `${m.FocalLength}mm` : null),
+        row(t('meta.focal35'), m.FocalLengthIn35mmFormat ? `${m.FocalLengthIn35mmFormat}mm (35mm)` : null),
+        row(t('meta.exposure'), m.ExposureCompensation != null ? `${m.ExposureCompensation > 0 ? '+' : ''}${m.ExposureCompensation} EV` : null),
+        row(t('meta.program'), m.ExposureProgram),
+        row(t('meta.metering'), m.MeteringMode),
+        row(t('meta.whiteBalance'), m.WhiteBalance),
+        row(t('meta.flash'), typeof m.Flash === 'string' ? m.Flash : m.Flash != null ? (m.Flash === 0 ? t('meta.flashOff') : t('meta.flashOn')) : null),
     ];
 
     // ---- Time ----
-    const formatDate = d => d instanceof Date ? d.toLocaleString('zh-CN') : d ? String(d) : null;
+    const formatDate = d => d instanceof Date && Number.isFinite(d.getTime())
+        ? d.toLocaleString(getLang() === 'zh' ? 'zh-CN' : 'en-US') : d ? String(d) : null;
     const timeRows = [
-        row('拍摄时间', formatDate(m.DateTimeOriginal)),
-        row('数字化时间', formatDate(m.DateTimeDigitized || m.CreateDate)),
-        row('最后修改', formatDate(m.ModifyDate || m.DateTime)),
+        row(t('meta.taken'), formatDate(m.DateTimeOriginal)),
+        row(t('meta.digitized'), formatDate(m.DateTimeDigitized || m.CreateDate)),
+        row(t('meta.modified'), formatDate(m.ModifyDate || m.DateTime)),
     ];
 
     // ---- GPS ----
-    const lat = m.latitude != null ? m.latitude : m.GPSLatitude;
-    const lon = m.longitude != null ? m.longitude : m.GPSLongitude;
+    const lat = normalizeGpsCoordinate(m.latitude ?? m.GPSLatitude, m.latitude != null ? null : m.GPSLatitudeRef, 90);
+    const lon = normalizeGpsCoordinate(m.longitude ?? m.GPSLongitude, m.longitude != null ? null : m.GPSLongitudeRef, 180);
     const alt = m.GPSAltitude;
     const hasGps = lat != null && lon != null;
     const gpsRows = hasGps ? [
-        row('经纬度', `${lat.toFixed(6)}, ${lon.toFixed(6)}`),
+        row(t('meta.coordinates'), `${lat.toFixed(6)}, ${lon.toFixed(6)}`),
         row('DMS', `${fmtCoord(lat, m.GPSLatitudeRef || (lat >= 0 ? 'N' : 'S'))}  /  ${fmtCoord(lon, m.GPSLongitudeRef || (lon >= 0 ? 'E' : 'W'))}`),
-        row('海拔', alt != null ? `${typeof alt === 'number' ? alt.toFixed(1) : alt}m` : null),
-        row('方向', m.GPSImgDirection != null ? `${m.GPSImgDirection}° ${m.GPSImgDirectionRef || ''}` : null),
-        row('时间戳 (UTC)', formatDate(m.GPSDateStamp || m.GPSTimeStamp)),
+        row(t('meta.altitude'), alt != null ? `${typeof alt === 'number' ? alt.toFixed(1) : alt}m` : null),
+        row(t('meta.direction'), m.GPSImgDirection != null ? `${m.GPSImgDirection}° ${m.GPSImgDirectionRef || ''}` : null),
+        row(t('meta.gpsTime'), formatDate(m.GPSDateStamp || m.GPSTimeStamp)),
     ] : [];
     const gpsNote = hasGps
-        ? '⚠️ 这张图附带精确 GPS 坐标,分享前建议用「转换」标签页剥离元数据。'
+        ? t('meta.gpsWarning')
         : null;
     const gpsExtra = hasGps ? `<div class="md-actions">
-        <a class="btn-secondary btn-xs" target="_blank" rel="noopener" href="https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}&zoom=15">在 OpenStreetMap 查看</a>
+        <a class="btn-secondary btn-xs" target="_blank" rel="noopener" href="https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}&zoom=15">${escHtml(t('meta.map'))}</a>
     </div>` : '';
 
     // ---- Image properties ----
     const imgRows = [
-        row('尺寸', ctx.dims),
-        row('色彩空间', m.ColorSpace === 1 || m.ColorSpace === 'sRGB' ? 'sRGB' : m.ColorSpace),
-        row('ICC 配置', m.ProfileDescription || m.ICC_Profile_Description),
-        row('方向', m.Orientation),
-        row('分辨率', m.XResolution ? `${m.XResolution} × ${m.YResolution || m.XResolution} DPI` : null),
+        row(t('meta.dimensions'), ctx.dims),
+        row(t('meta.colorSpace'), m.ColorSpace === 1 || m.ColorSpace === 'sRGB' ? 'sRGB' : m.ColorSpace),
+        row(t('meta.icc'), m.ProfileDescription || m.ICC_Profile_Description),
+        row(t('meta.direction'), m.Orientation),
+        row(t('meta.resolution'), m.XResolution ? `${m.XResolution} × ${m.YResolution || m.XResolution} DPI` : null),
     ];
 
     // ---- Editing history (Photoshop) ----
     const hist = m.History || m['xmpMM:History'] || m.historyItems;
     let histHtml = '';
     if (Array.isArray(hist) && hist.length) {
-        const items = hist.slice(0, 20).map(h => {
+        const items = hist.filter(h => h && typeof h === 'object').slice(0, 20).map(h => {
             const action = h.action || h.Action || '—';
             const when = h.when ? formatDate(h.when) : '';
             const soft = h.softwareAgent || h.SoftwareAgent || '';
             return `<li><span class="md-hist-action">${escHtml(action)}</span> <span class="md-hist-meta">${escHtml(soft)} ${escHtml(when)}</span></li>`;
         }).join('');
         histHtml = `<section class="md-section">
-            <h4 class="md-section-title">编辑历史 <span class="md-count">${hist.length}</span></h4>
+            <h4 class="md-section-title">${escHtml(t('meta.history'))} <span class="md-count">${hist.length}</span></h4>
             <ol class="md-hist">${items}</ol>
         </section>`;
     }
 
     // ---- C2PA ----
     let c2paHtml = '';
-    if (jumbf.present) {
+    if (jumbf.present || jumbf.verification?.present) {
         const verification = jumbf.verification || {};
         const c2paRows = [
-            row('Validation', verification.state || verification.status || '未验证'),
-            row('DigitalSourceType', jumbf.digitalSourceType || '未声明'),
-            row('Claim generator', verification.claimGenerator || '—'),
-            row('Failures', (verification.failure || []).map(s => s.code).join(', ') || '—'),
-            row('JUMBF boxes', jumbf.indices.length),
-            row('Labels', jumbf.labels.join(', ') || '—'),
+            row(t('meta.sourceType'), verification.digitalSourceType || t('meta.notDeclared')),
+            row(t('meta.claimGenerator'), verification.claimGenerator || '—'),
+            row(t('meta.failures'), (verification.failure || []).map(s => s.code).join(', ') || '—'),
+            row(t('meta.integrity'), verification.verified ? t('meta.valid') : verification.invalid ? t('meta.invalid') : t('meta.unverified')),
+            row(t('meta.signerTrust'), verification.trusted ? t('meta.trusted') : t('meta.trustUnconfirmed')),
+            row('JUMBF boxes', jumbf.indices?.length ?? 0),
+            row('Labels', jumbf.labels?.join(', ') || '—'),
         ];
         c2paHtml = section('C2PA / Content Credentials', c2paRows, { accent: 'accent' });
     }
+
+    const aigc = ctx.aigc;
+    const aigcHtml = aigc && aigc.status !== 'absent' ? section(t('det.aigc.title'), [
+        row(t('meta.declaration'), t('det.aigc.' + (aigc.status === 'present' ? aigc.declaration : aigc.status))),
+        ...(aigc.labels || []).flatMap(label => [
+            ...Object.entries(label.fields).map(([key, value]) => row(t('det.aigc.field.' + key), value || '—')),
+            row(t('det.aigc.field.location'), label.sources.join(', ')),
+            row(t('det.aigc.field.issues'), label.issues.join(', ')),
+        ]),
+        row(t('det.aigc.field.issues'), aigc.warnings?.join(', ')),
+    ], { note: t('det.aigc.description'), accent: 'accent' }) : '';
 
     // ---- Raw dump ----
     const rawLines = [];
     for (const [k, v] of Object.entries(m)) {
         if (k.startsWith('_')) continue;
         let vs = v;
-        if (v instanceof Date) vs = v.toISOString();
+        if (v instanceof Date) vs = Number.isFinite(v.getTime()) ? v.toISOString() : String(v);
         else if (typeof v === 'object') vs = JSON.stringify(v);
         else if (typeof v === 'number') vs = v.toString();
         rawLines.push(`${k}: ${vs}`);
     }
     const rawHtml = rawLines.length ? `<details class="md-raw">
-        <summary>全部原始字段 (${rawLines.length})</summary>
+        <summary>${escHtml(t('meta.raw'))} (${rawLines.length})</summary>
         <pre>${escHtml(rawLines.join('\n'))}</pre>
     </details>` : '';
 
     container.innerHTML = `
         ${verdictHtml}
         ${c2paHtml}
-        ${section('相机与镜头', cameraRows)}
-        ${section('拍摄参数', captureRows)}
-        ${section('时间', timeRows)}
-        ${hasGps ? section('地理位置', gpsRows, { note: gpsNote, noteType: 'warn', accent: 'accent' }) + gpsExtra : ''}
-        ${section('图像属性', imgRows)}
+        ${aigcHtml}
+        ${section(t('meta.cameraSection'), cameraRows)}
+        ${section(t('meta.captureSection'), captureRows)}
+        ${section(t('meta.timeSection'), timeRows)}
+        ${hasGps ? section(t('meta.gpsSection'), gpsRows, { note: gpsNote, noteType: 'warn', accent: 'accent' }) + gpsExtra : ''}
+        ${section(t('meta.imageSection'), imgRows)}
         ${histHtml}
-        ${!hasAny && !jumbf.present ? '<section class="md-empty">这张图几乎不含任何元数据 —— 要么被剥离过,要么源自 AI 生成或截图。</section>' : ''}
+        ${!hasAny && !jumbf.present && !jumbf.verification?.present && (!aigc || aigc.status === 'absent') ? `<section class="md-empty">${escHtml(t('meta.empty'))}</section>` : ''}
         ${rawHtml}
     `;
-}
-
-function analyzeVerdict(m, jumbf) {
-    // "Strong real" signals
-    const hasCamera = !!(m.Make && m.Model);
-    const hasLens = !!(m.LensModel || m.Lens);
-    const hasCaptureParams = m.FNumber && m.ExposureTime && (m.ISO || m.ISOSpeedRatings);
-    const hasGps = m.latitude != null || m.GPSLatitude != null;
-    const hasMakerNote = !!(m.MakerNote || m.makerNote);
-    const c2paVerified = jumbf?.verification?.verified === true;
-    const c2paAi = c2paVerified && jumbf?.digitalSourceType && ['trainedAlgorithmicMedia',
-        'compositeWithTrainedAlgorithmicMedia', 'algorithmicMedia', 'dataDrivenMedia']
-        .includes(jumbf.digitalSourceType);
-    const c2paReal = c2paVerified && jumbf?.digitalSourceType === 'digitalCapture';
-    const softIsAi = /Midjourney|Stable|Diffusion|ComfyUI|DALL|OpenAI|Firefly|Gemini|Imagen/i.test(m.Software || '');
-
-    if (c2paAi || softIsAi) {
-        return { level: 'ai', icon: '🤖', title: '元数据直接声明 AI 生成',
-            sub: (softIsAi ? `Software 字段: ${m.Software}` : `C2PA DigitalSourceType: ${jumbf.digitalSourceType}`) };
-    }
-    if (c2paReal) {
-        return { level: 'strong', icon: '📸', title: '相机原生 C2PA 凭证',
-            sub: `C2PA DigitalSourceType = digitalCapture · 签名和资源哈希验证通过` };
-    }
-    let realScore = 0;
-    if (hasCamera) realScore++;
-    if (hasLens) realScore++;
-    if (hasCaptureParams) realScore += 2;
-    if (hasMakerNote) realScore += 2;
-    if (hasGps) realScore++;
-
-    if (realScore >= 4) return { level: 'strong', icon: '📸',
-        title: '强烈指向真实相机拍摄',
-        sub: '元数据包含相机/镜头/拍摄参数/厂商私有字段,AI 图片通常无法伪造所有这些。' };
-    if (realScore >= 2) return { level: 'medium', icon: '📷',
-        title: '有相机元数据痕迹',
-        sub: '部分相机字段存在,但不足以确认未被伪造。' };
-    if (hasCamera) return { level: 'weak', icon: '📎',
-        title: '仅有基础相机字段',
-        sub: 'Make/Model 存在,但缺少拍摄参数等强证据。可能经过了重压缩或软件处理。' };
-    return { level: 'none', icon: '○',
-        title: '无可用元数据',
-        sub: '图片几乎不含元数据。可能来自截图、社交媒体重编码,或本就是 AI 生成。' };
 }

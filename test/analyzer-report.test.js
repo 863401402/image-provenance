@@ -44,3 +44,14 @@ test('analysis report marks unsuitable frequency input without retaining visuali
     assert.deepEqual(report.frequency.suitabilityReasons, ['qrCode']);
     assert.equal('viz' in report.frequency, false);
 });
+
+test('analysis report retains AIGC fields and parsing warnings without claiming verification', () => {
+    const aigc = { status: 'present', declaration: 'possible', confidence: 'weak', verified: false,
+        labels: [{ fields: { Label: '2', ContentProducer: 'sample-service', ProduceID: 'image-1' },
+            sources: ['png.tEXt'], valid: true, issues: [] }], warnings: ['png.truncated'] };
+    const report = createAnalysisReport({ file, dimensions, hash: 'abc', mode: 'quick',
+        detections: [{ hit: true, title: 'AIGC', category: 'provenance', confidence: 'weak' }], aigc });
+    assert.equal(report.verdict, 'uncertain');
+    assert.deepEqual(report.aigc, aigc);
+    assert.deepEqual(report.warnings, ['aigc: png.truncated']);
+});

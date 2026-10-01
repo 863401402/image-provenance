@@ -61,3 +61,12 @@ test('source type is read only from its structured field', () => {
     assert.equal(structured.digitalSourceType, 'trainedAlgorithmicMedia');
     assert.equal(incidental.digitalSourceType, null);
 });
+
+test('ingredient source types are not attributed to the active image', () => {
+    for (const manifest of [
+        { ingredients: [{ digitalSourceType: 'trainedAlgorithmicMedia' }] },
+        { assertions: [{ label: 'c2pa.ingredient.v3', data: { digitalSourceType: 'trainedAlgorithmicMedia' } }] },
+    ]) {
+        assert.equal(summarizeValidationStore({ validation_state: 'Trusted' }, manifest).digitalSourceType, null);
+    }
+});

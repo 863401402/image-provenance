@@ -2,19 +2,21 @@
 // Returns a list of detection cards plus a merged metadata snapshot.
 
 import { bytesToString } from './utils.js';
-import { parseMetadata, sniffJumbf, getGenerationHints } from './metadata.js';
+import { parseMetadata, sniffJumbf, getGenerationHints, getAiGenerationHints } from './metadata.js';
 import { detectWatermarkFFT } from './watermark-detect.js';
 import { MARKERS } from './markers.js';
-import { verifyC2pa, isAiSourceType } from './c2pa-verify.js';
+import { verifyC2pa, hasVerifiedAiSource } from './c2pa-verify.js';
 import { t } from './i18n.js';
+import { readAigcMetadata } from './aigc.js';
 
-function findWithContext(str, keywords) {
+export function findWithContext(str, keywords) {
     const results = [];
     const seen = new Set();
+    const searchable = str.toLowerCase();
     for (const kw of keywords) {
         const lk = kw.toLowerCase();
         if (seen.has(lk)) continue;
-        const idx = str.indexOf(kw);
+        const idx = searchable.indexOf(lk);
         if (idx !== -1) {
             seen.add(lk);
             const start = Math.max(0, idx - 30);
@@ -42,20 +44,42 @@ function card(title, hit, badgeText, desc, detail, confidence) {
 }
 
 export async function runAllDetections(uint8, { mime = 'image/jpeg' } = {}) {
-    const str = bytesToString(uint8);
+    // Preserve binary ASCII clues and decode UTF-8 metadata for Chinese tool names.
+    const str = bytesToString(uint8) + '\n' + new TextDecoder().decode(uint8);
     const jumbf = sniffJumbf(uint8);
     const [meta, c2pa] = await Promise.all([
         parseMetadata(uint8),
         jumbf.present ? verifyC2pa(uint8, mime) : Promise.resolve({ status: 'absent', present: false }),
     ]);
     const detections = [];
+    const aigc = await readAigcMetadata(uint8, meta);
+
+    // Editable GB / TC260 declarations: Label 2/3 and conflicting records stay weak.
+    const aigcHit = aigc.labels.some(label => label.valid);
+    const aigcState = aigc.status === 'present' ? aigc.declaration : aigc.status;
+    const aigcDetails = aigc.labels.map(label => [
+        ...Object.entries(label.fields).map(([key, value]) => `${t('det.aigc.field.' + key)}: ${value || '—'}`),
+        `${t('det.aigc.field.location')}: ${label.sources.join(', ')}`,
+        label.issues.length ? `${t('det.aigc.field.issues')}: ${label.issues.join(', ')}` : null,
+    ].filter(Boolean).join('\n'));
+    if (aigc.warnings.length) aigcDetails.push(`${t('det.aigc.field.issues')}: ${aigc.warnings.join(', ')}`);
+    detections.push({
+        ...card(t('det.aigc.title'), aigcHit, t('det.aigc.' + aigcState),
+            t('det.aigc.description'),
+            aigcDetails.join('\n\n') || null,
+            aigc.confidence || (aigc.status === 'absent' ? null : 'info')),
+        category: 'provenance',
+        aiEvidence: aigcHit,
+        badgeClass: aigc.confidence === 'medium' ? 'badge-hit'
+            : aigc.status === 'absent' ? 'badge-clean' : 'badge-uncertain',
+    });
 
     // --- 1. C2PA (structured: JUMBF box + DigitalSourceType) ---
     {
         const m = MARKERS.find(x => x.id === 'c2pa');
         const found = findWithContext(str, m.keywords);
         const sourceType = c2pa.digitalSourceType || jumbf.digitalSourceType;
-        const verifiedAi = c2pa.verified && isAiSourceType(sourceType);
+        const verifiedAi = hasVerifiedAiSource(c2pa);
         const hit = c2pa.present || jumbf.present || found.length > 0;
         let badgeText, desc, confidence, badgeClass;
         if (verifiedAi) {
@@ -112,8 +136,7 @@ export async function runAllDetections(uint8, { mime = 'image/jpeg' } = {}) {
     // --- 2. Structured metadata (EXIF/XMP/IPTC/ICC via exifr) ---
     {
         const hints = getGenerationHints(meta);
-        const aiStrings = /Gemini|Imagen|SynthID|Midjourney|Stable\s*Diffusion|ComfyUI|DALL|OpenAI|Firefly|Adobe Firefly|trainedAlgorithmicMedia/i;
-        const hit = hints.some(h => aiStrings.test(String(h.value)));
+        const hit = getAiGenerationHints(meta).length > 0;
         const hasAny = hints.length > 0;
         const metaLine = hints.map(h => `${h.label}: ${h.value}`).join('\n');
         detections.push(card(
@@ -124,7 +147,7 @@ export async function runAllDetections(uint8, { mime = 'image/jpeg' } = {}) {
                 : hasAny ? '提取到的元数据字段未匹配 AI 生成标记。'
                 : '图片几乎不含元数据(可能被剥离)。',
             metaLine || null,
-            hit ? 'strong' : null,
+            hit ? 'medium' : null,
         ));
     }
 
@@ -137,11 +160,12 @@ export async function runAllDetections(uint8, { mime = 'image/jpeg' } = {}) {
         const isEdit = m.category === 'edit';
         detections.push({
             ...card(
-                m.title, hit,
-                hit ? (isEdit ? '发现修图痕迹' : '发现标记') : '未发现',
-                hit ? m.hitDesc(found) : m.missDesc,
+                ['bytedance', 'qwen'].includes(m.id) ? t('det.title.' + m.id) : m.title, hit,
+                hit ? (isEdit ? '发现修图痕迹' : t('badge.markerFound')) : t('badge.notfound'),
+                hit ? t(isEdit ? 'det.cardEditHits' : 'det.cardKwHits', { list: found.map(f => f.keyword).join(', ') })
+                    : ['bytedance', 'qwen'].includes(m.id) ? t('det.desc.' + m.id + '.miss') : m.missDesc,
                 found.length ? detailOf(found) : null,
-                hit ? (isEdit ? 'info' : 'medium') : null,
+                hit ? (isEdit ? 'info' : 'weak') : null,
             ),
             category: m.category || 'ai',
         });
@@ -151,20 +175,22 @@ export async function runAllDetections(uint8, { mime = 'image/jpeg' } = {}) {
     {
         const wm = detectWatermarkFFT(uint8);
         detections.push(card(
-            '像素级隐形水印(字节级启发)',
-            wm.suspicious,
-            wm.suspicious ? `疑似水印 (异常度 ${wm.score}%)` : '未检测到异常',
-            wm.suspicious
-                ? '字节分布偏离自然图像模型,可能存在隐形水印。完整频域分析将在"频域"tab 提供。'
-                : '字节分布符合自然图像特征,未发现明显水印痕迹。',
+            t('det.title.wm'),
+            false,
+            wm.applicable === false ? t('det.watermark.insufficient')
+                : t('det.watermark.statistics'),
+            wm.applicable === false ? t('det.watermark.insufficientDesc') : wm.suspicious
+                ? t('det.desc.wm.suspect')
+                : t('det.desc.wm.clean'),
             `异常度: ${wm.score}%\n高频比: ${wm.highFreqRatio.toFixed(4)}\n中频峰值: ${wm.midFreqPeaks}\nLSB偏移: ${wm.lsbBias.toFixed(4)}`,
-            wm.suspicious ? 'weak' : null,
+            'info',
         ));
     }
 
     return {
         detections,
         meta,
+        aigc,
         jumbf: {
             ...jumbf,
             digitalSourceType: c2pa.digitalSourceType || jumbf.digitalSourceType,

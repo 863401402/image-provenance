@@ -10,8 +10,8 @@
     <meta name="google-site-verification" content="tAE5kFYeI-_1e19pgIbg-sDxBxu5IBr7WKXmuY_Npww">
     <meta name="msvalidate.01" content="A9E04D43D9DB23A16C062CCB8BF9A685">
     <title>AI 图片检测 · C2PA / SynthID / Sora / Gemini / Midjourney 溯源 · Image Provenance</title>
-    <meta name="description" content="免费 AI 图片检测工具。100% 在浏览器里运行,图片不上传。识别 C2PA / Content Credentials 来源凭证、Google SynthID 水印、OpenAI DALL·E / Sora / gpt-image / Nano Banana、Midjourney、Stable Diffusion / SDXL / Flux、Adobe Firefly 等 AI 生成签名。提取 EXIF / XMP / IPTC / ICC 元数据,65 项频域特征启发式分析,支持去除元数据、扰动水印、注入相机 EXIF 伪装为真实照片。AI image detector, AI-generated image detection, free online tool, no upload.">
-    <meta name="keywords" content="AI 图片检测,AI 生成图检测,AI 图片识别,AI 图识别,判断图片是否 AI 生成,ai图片溯源,C2PA 检测,Content Credentials,SynthID 检测,SynthID detector,Sora 检测,Sora 水印,DALL-E 检测,dalle 检测,gpt-image,Nano Banana,Midjourney 检测,Stable Diffusion 检测,SDXL 检测,Flux 检测,ComfyUI 检测,Adobe Firefly 检测,Gemini 生成图,Imagen 检测,EXIF 分析,EXIF 查看,EXIF 在线,XMP 元数据,IPTC,ICC,JUMBF,频域分析,FFT 图像分析,DCT 分析,小波分析,图像水印检测,图像水印去除,不可见水印,隐形水印,隐写术检测,图片溯源,图像取证,image forensics,AI image detector,AI-generated image detection,AI image watermark,synthetic image detection,diffusion model detection,watermark removal,metadata stripper,EXIF viewer online,C2PA verifier,OpenAI 检测工具,OpenAI detect,ChatGPT 图片检测,客户端工具,浏览器工具,零后端,图片不上传,免费在线工具,在线检测">
+    <meta name="description" content="免费 AI 图片检测工具。100% 在浏览器里运行,图片不上传。验证 C2PA / Content Credentials 来源凭证，检查生成工具元数据：OpenAI DALL·E / Sora / gpt-image、Google Gemini / Nano Banana、豆包 / Seedream、Qwen-Image、Midjourney、Stable Diffusion / SDXL / Flux、Adobe Firefly 等 AI 生成签名。提取 EXIF / XMP / IPTC / ICC 元数据,65 项频域特征启发式分析,支持去除元数据、扰动水印、注入相机 EXIF 伪装为真实照片。AI image detector, AI-generated image detection, free online tool, no upload.">
+    <meta name="keywords" content="AI 图片检测,AI 生成图检测,AI 图片识别,AI 图识别,判断图片是否 AI 生成,ai图片溯源,C2PA 检测,Content Credentials,SynthID 检测,SynthID metadata clues,Sora 检测,Sora 水印,DALL-E 检测,dalle 检测,gpt-image,Nano Banana,Midjourney 检测,Stable Diffusion 检测,SDXL 检测,Flux 检测,ComfyUI 检测,Adobe Firefly 检测,Gemini 生成图,Imagen 检测,EXIF 分析,EXIF 查看,EXIF 在线,XMP 元数据,IPTC,ICC,JUMBF,频域分析,FFT 图像分析,DCT 分析,小波分析,图像水印检测,图像水印去除,不可见水印,隐形水印,隐写术检测,图片溯源,图像取证,image forensics,AI image detector,AI-generated image detection,AI image watermark,synthetic image detection,diffusion model detection,watermark removal,metadata stripper,EXIF viewer online,C2PA verifier,OpenAI 检测工具,OpenAI detect,ChatGPT 图片检测,客户端工具,浏览器工具,零后端,图片不上传,免费在线工具,在线检测">
     <meta name="author" content="Image Provenance">
     <link rel="canonical" href="https://863401402.github.io/image-provenance/">
     <meta name="robots" content="index, follow, max-image-preview:large">
@@ -39,7 +39,7 @@
     <meta property="og:locale:alternate" content="en_US">
     <meta property="og:site_name" content="Image Provenance · AI 图片溯源">
     <meta property="og:title" content="AI 图片检测 · C2PA / SynthID / Sora / Midjourney / DALL-E 溯源 · 浏览器运行不上传">
-    <meta property="og:description" content="免费 AI 图片检测工具。识别 C2PA、Google SynthID、OpenAI DALL-E / Sora / gpt-image、Midjourney、Stable Diffusion、Flux、Adobe Firefly、Gemini 等 AI 生成签名;读取 EXIF / XMP 元数据;65 项频域特征分析。100% 客户端,图片不上传。">
+    <meta property="og:description" content="免费 AI 图片检测工具。验证 C2PA，检查生成工具元数据：OpenAI DALL-E / Sora / gpt-image、Midjourney、Stable Diffusion、Flux、Adobe Firefly、Gemini 等 AI 生成签名;读取 EXIF / XMP 元数据;65 项频域特征分析。100% 客户端,图片不上传。">
     <meta property="og:url" content="https://863401402.github.io/image-provenance/">
     <meta property="og:image" content="https://863401402.github.io/image-provenance/docs/screenshots/main-light.svg">
     <meta property="og:image:width" content="1200">
@@ -60,7 +60,7 @@
       "@type": "SoftwareApplication",
       "name": "Image Provenance",
       "alternateName": ["AI 图片溯源检测", "AI 图片检测工具", "AI Image Detector"],
-      "description": "浏览器内运行的免费 AI 图片溯源工具:检测 C2PA / Google SynthID / OpenAI DALL-E / Sora / Midjourney / Stable Diffusion / Flux / Adobe Firefly / Gemini 等 AI 生成签名,读取 EXIF 元数据,65 项频域特征启发式分析,支持元数据清洗与相机 EXIF 伪装。",
+      "description": "浏览器内运行的免费 AI 图片溯源工具:验证 C2PA，检查生成工具元数据： OpenAI DALL-E / Sora / Midjourney / Stable Diffusion / Flux / Adobe Firefly / Gemini 等 AI 生成签名,读取 EXIF 元数据,65 项频域特征启发式分析,支持元数据清洗与相机 EXIF 伪装。",
       "url": "https://863401402.github.io/image-provenance/",
       "applicationCategory": ["MultimediaApplication", "SecurityApplication", "UtilitiesApplication"],
       "operatingSystem": "Any (Web Browser)",
@@ -70,7 +70,7 @@
       "inLanguage": ["zh-CN", "en"],
       "featureList": [
         "C2PA / Content Credentials detection",
-        "Google SynthID watermark detection",
+        "Google tool metadata clues (not SynthID decoding)",
         "OpenAI DALL-E / Sora / gpt-image / Nano Banana detection",
         "Midjourney signature detection",
         "Stable Diffusion / SDXL / Flux / ComfyUI detection",
@@ -102,12 +102,12 @@
         {
           "@type": "Question",
           "name": "能检测 Google SynthID 水印吗?",
-          "acceptedAnswer": {"@type": "Answer", "text": "可做频域启发式参考,但 SynthID 目前没有官方公开的 detector,仅靠相位一致性等特征判断,准确率有限。工具还提供水印扰动功能用于学术鲁棒性评估。"}
+          "acceptedAnswer": {"@type": "Answer", "text": "本工具不解码 SynthID，字节统计与频域分析不能验证该水印。Google 已在 Gemini 提供图片 SynthID 验证；使用该服务需自行向 Google 上传图片，本工具不会代为上传。"}
         },
         {
           "@type": "Question",
           "name": "支持检测哪些 AI 图像生成工具?",
-          "acceptedAnswer": {"@type": "Answer", "text": "OpenAI DALL-E / Sora / gpt-image、Google Gemini / Imagen / SynthID / Nano Banana、Midjourney、Stable Diffusion / SDXL / Flux / ComfyUI / Automatic1111 / InvokeAI、Adobe Firefly。支持识别 C2PA Content Credentials 来源凭证。"}
+          "acceptedAnswer": {"@type": "Answer", "text": "OpenAI DALL-E / Sora / gpt-image、Google Gemini / Imagen / Nano Banana、豆包 / Seedream、Qwen-Image / HunyuanImage、Midjourney、Stable Diffusion / SDXL / Flux / ComfyUI / Automatic1111 / InvokeAI、Adobe Firefly。支持识别 C2PA Content Credentials 来源凭证。"}
         },
         {
           "@type": "Question",
@@ -204,10 +204,10 @@
             <section class="pane pane-right" id="paneRight">
                 <div class="empty-state" id="emptyState">
                     <h1 class="hero-title" data-i18n="hero.title">追溯一张图的来路</h1>
-                    <p class="hero-sub" data-i18n="hero.sub">检测 C2PA 凭证、AI 生成签名、频域水印痕迹。</p>
+                    <p class="hero-sub" data-i18n="hero.sub">验证 C2PA 凭证、检查生成工具元数据与频域异常。</p>
                     <div class="empty-checks">
                         <div class="empty-check"><span class="ec-dot"></span><span data-i18n="hero.feature.c2pa">C2PA / Content Credentials</span></div>
-                        <div class="empty-check"><span class="ec-dot"></span><span data-i18n="hero.feature.vendors">OpenAI · Google SynthID · Midjourney · SD</span></div>
+                        <div class="empty-check"><span class="ec-dot"></span><span data-i18n="hero.feature.vendors">OpenAI · Gemini · Seedream · Qwen-Image</span></div>
                         <div class="empty-check"><span class="ec-dot"></span><span data-i18n="hero.feature.freq">65 项频域特征 + 启发式打分</span></div>
                         <div class="empty-check"><span class="ec-dot"></span><span data-i18n="hero.feature.clean">元数据清洗 / 相机 EXIF 伪装</span></div>
                     </div>
@@ -364,7 +364,7 @@
                                 <span class="toggle-slider"></span>
                                 <span class="toggle-text" data-i18n="conv.wm.toggle">扰动像素级隐形水印</span>
                             </label>
-                            <p class="panel-hint panel-hint-inline" data-i18n="conv.wm.hint">多种技术组合降低 SynthID / Stable Signature / dwtDct 等水印可检测性。</p>
+                            <p class="panel-hint panel-hint-inline" data-i18n="conv.wm.hint">像素扰动用于统计比较；未验证专用水印去除效果。</p>
                             <div class="wm-controls" id="wmControls" aria-hidden="true">
                                 <div class="wm-control-row">
                                     <span class="wm-ctrl-label" data-i18n="conv.preset">预设</span>
@@ -416,7 +416,7 @@
                                     <label class="tech-cell" data-tech="fftPhase">
                                         <input type="checkbox" data-tech="fftPhase">
                                         <span class="tech-name"><span data-i18n="conv.tech.fftPhase">FFT 相位扰动</span> <span class="tech-badge" data-i18n="conv.tech.badge.slow">慢</span></span>
-                                        <span class="tech-desc" data-i18n="conv.tech.fftPhase.desc">真 2D-FFT 中频相位 ±3-5°,直击 SynthID,~500ms</span>
+                                        <span class="tech-desc" data-i18n="conv.tech.fftPhase.desc">真 2D-FFT 中频相位扰动 ±3-5°，效果待验证</span>
                                     </label>
                                     <label class="tech-cell" data-tech="median">
                                         <input type="checkbox" data-tech="median">
