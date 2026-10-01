@@ -34,7 +34,7 @@ function findSourceType(value, seen = new Set(), depth = 0) {
     for (const [key, child] of Object.entries(value)) {
         const normalizedKey = key.replace(/[^a-z]/gi, '').toLowerCase();
         if (normalizedKey === 'digitalsourcetype' && typeof child === 'string') {
-            const found = SOURCE_TYPES.find(type => child.includes(type));
+            const found = SOURCE_TYPES.find(type => child.split(/[\/#]/).pop() === type);
             if (found) return found;
         }
     }
@@ -85,6 +85,10 @@ export function summarizeValidationStore(store = {}, manifest = null) {
 
 export function isAiSourceType(value) {
     return AI_SOURCE_TYPES.includes(value);
+}
+
+export function hasVerifiedAiSource(verification = {}) {
+    return verification.verified === true && isAiSourceType(verification.digitalSourceType);
 }
 
 export async function verifyC2pa(uint8, mime = 'image/jpeg') {

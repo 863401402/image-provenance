@@ -4,6 +4,12 @@
 // src/frequency/ and runs on decoded pixel data inside a Web Worker.
 
 export function detectWatermarkFFT(uint8) {
+    // The sampler starts at byte 1000. Small inputs contain no usable samples;
+    // avoid division by zero and NaN statistics for valid tiny images.
+    if (uint8.length < 1024) {
+        return { applicable: false, suspicious: false, score: 0,
+            highFreqRatio: 0, midFreqPeaks: 0, lsbBias: 0 };
+    }
     // --- LSB bias ---
     const lsb0 = { r: 0, g: 0, b: 0 };
     const lsb1 = { r: 0, g: 0, b: 0 };

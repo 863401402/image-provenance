@@ -3,6 +3,8 @@
 // at render time. Static text uses data-i18n[-attr] in HTML.
 
 const STRINGS = {
+    'det.watermark.insufficient': { zh: '样本不足', en: 'Insufficient samples' },
+    'det.watermark.insufficientDesc': { zh: '文件过小，无法进行字节统计；这不代表不存在水印。', en: 'The file is too small for byte statistics; this does not rule out a watermark.' },
     // Hero / empty-state
     'hero.title':           { zh: '追溯一张图的来路',                                                  en: 'Trace where an image comes from' },
     'hero.sub':             { zh: '检测 C2PA 凭证、AI 生成签名、频域水印痕迹。',                       en: 'Detect C2PA credentials, AI-generated signatures, and frequency-domain watermark traces.' },
@@ -323,12 +325,13 @@ const STRINGS = {
 let _lang = null;
 
 function detectLang() {
-    const params = new URLSearchParams(window.location.search);
+    const params = new URLSearchParams(globalThis.window?.location?.search || '');
     const fromUrl = params.get('lang');
     if (fromUrl === 'en' || fromUrl === 'zh') return fromUrl;
-    const saved = localStorage.getItem('lang');
+    let saved = null;
+    try { saved = globalThis.localStorage?.getItem('lang'); } catch {}
     if (saved === 'en' || saved === 'zh') return saved;
-    return /^zh\b/i.test(navigator.language || '') ? 'zh' : 'en';
+    return /^zh\b/i.test(globalThis.navigator?.language || '') ? 'zh' : 'en';
 }
 
 export function getLang() { return _lang ||= detectLang(); }

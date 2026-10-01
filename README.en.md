@@ -59,6 +59,10 @@ ES Modules + Web Workers require HTTP — `file://` will not load.
 
 ## Accuracy & ethics
 
+**Doubao and invisible watermarks:** This project has no dedicated Doubao invisible-watermark decoder or classifier that guarantees identification. Visible corner labels need manual inspection; there is no OCR. Original files may retain provenance credentials, generator metadata or frequency clues, which screenshots and re-encoding can remove. No detection does not prove that an image is not AI-generated.
+
+**Evidence levels:** An explicit AI source type in a verified C2PA manifest is strong evidence. Editable generator fields are medium evidence. Tool names in raw file bytes are weak clues; mentioning an AI tool in a caption does not identify the generator. A `SynthID` string alone does not decode Google's pixel watermark.
+
 **This is not a calibrated classifier.** [Corvi et al. 2023](https://arxiv.org/abs/2304.06408) documents spectral and spatial anomalies in generated imagery, while [AIDE 2024](https://arxiv.org/abs/2406.19435) shows that off-the-shelf detectors still fail heavily on realistic, unseen generated images. Frequency output therefore describes anomaly strength, not proof of AI generation; verified C2PA provenance should take priority.
 
 **Watermark disruption** is for research: privacy de-identification and academic robustness evaluation. **Not endorsed** for disinformation, impersonation, or fraud. Position aligned with [WAVES (NeurIPS 2024)](https://arxiv.org/abs/2401.08573).

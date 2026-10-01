@@ -37,6 +37,20 @@ const AI_SOURCE_TYPES = [
 ];
 const NON_AI_SOURCE_TYPES = ['digitalCapture', 'digitalCreation', 'composite'];
 
+// Captions, camera brands and authors can mention AI tools without identifying
+// the generator. Only tool/source-type fields provide generation evidence.
+export function getAiGenerationHints(meta = {}) {
+    const tools = /\b(?:Gemini|Imagen|SynthID|Midjourney|Stable[\s_-]*Diffusion|ComfyUI|DALL(?:[\s·_-]*E)?|OpenAI|Firefly|Flux|InvokeAI|Fooocus|Automatic1111|A1111|gpt-image(?:-\d+)?)\b/i;
+    return getGenerationHints(meta).filter(({ label, value }) => {
+        if (label === 'Software' || label === 'CreatorTool') return tools.test(value);
+        if (label === 'DigitalSourceType' || label === 'digitalSourceType') {
+            const type = value.split(/[\/#]/).pop();
+            return AI_SOURCE_TYPES.includes(type);
+        }
+        return false;
+    });
+}
+
 export function sniffJumbf(uint8) {
     const out = { present: false, digitalSourceType: null, labels: [], indices: [] };
     for (let i = 4; i < uint8.length - 4; i++) {
