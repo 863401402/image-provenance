@@ -20,7 +20,7 @@
 
 ## 能做什么
 
-- **多层检测**:C2PA / Content Credentials、Google SynthID、OpenAI DALL-E / Sora、Midjourney、Stable Diffusion / Flux、Adobe Firefly 等 AI 生成签名。带强/中/弱置信度徽标,只有强中信号才报"命中"。
+- **多层检测**:验证 C2PA / Content Credentials，检查 OpenAI、Google Gemini / Imagen、豆包 / Seedream / 即梦、Qwen-Image / HunyuanImage、Midjourney、Stable Diffusion / Flux、Adobe Firefly 等工具标记。不解码 SynthID；带强/中/弱置信度徽标，只有强中信号才作为来源证据。
 - **元数据详情**:EXIF / XMP / IPTC / ICC 全展开,GPS 带隐私警告 + OSM 链接,XMP 编辑历史完整时间线。
 - **频域分析**:Web Worker 里跑 65 个特征 + viridis FFT 热图 + 归一化径向功率谱 + 多证据族启发式分析。
 - **图片转换**:字节级剥 C2PA → 自动校正 EXIF 方向 → 透明区域合成白底 → Canvas 重编码 → 可选水印扰动 → 注入相机 EXIF。
@@ -32,6 +32,8 @@
 零构建,单 HTML + ES Modules。仓库内置官方 C2PA WebAssembly 验证器;按需从 CDN 加载 [`exifr`](https://github.com/MikeKovarik/exifr)、[`piexifjs`](https://github.com/hMatoba/piexifjs) 和 [`fflate`](https://github.com/101arrowz/fflate)。FFT / DCT / DWT、8 项水印扰动和 65 项特征均在浏览器本地运行。
 
 ## 批量模式与浏览器 API
+
+**国内 AIGC 结构化标识**：读取 JPEG / PNG / WebP 的 TC260 XMP 与 PNG AIGC 文本块，展示生成服务商、制作编号、传播服务商与传播编号。`Label="1"` 是可编辑的中等元数据证据；`"2"`（可能）、`"3"`（疑似）与多份冲突仅作弱线索。缺失、损坏、未知标签不会被当作确定生成。CSV / JSON 批量报告保留这些字段，全部在本地解析。存储范围与限制见 [AIGC 标识解析说明](docs/AIGC-METADATA.md)。
 
 页面左侧切换到“批量”即可添加多张 JPEG、PNG 或 WebP。快速检测并发 2 个;完整检测和转换并发 1 个,避免高分辨率 Canvas 和 FFT 同时占用过多内存。单次队列最多 200 项,其中转换最多 50 项。快速检测只检查来源凭证与元数据,完整检测会继续运行频域分析。
 
@@ -59,7 +61,11 @@ ES Modules + Web Worker 需要 HTTP 协议,`file://` 打不开。
 
 ## 准确性与伦理
 
-**豆包与隐形水印**：当前没有豆包专用隐形水印解码器，也没有可保证识别豆包图片的分类器。右下角可见文字需要人工查看，本工具不做 OCR。可检查原始文件的来源凭证、生成工具元数据和频域线索；截图、转存或重编码后可能丢失这些信息。未命中不能证明图片不是 AI 生成。
+**豆包与隐形水印**：支持豆包 / Seedream / 即梦、Qwen-Image / HunyuanImage 等工具名称的元数据与字节线索，但没有专用隐形水印解码器或可保证识别这些图片的分类器。工具字段是可编辑的中等证据，字节名称仅为弱线索。可见文字需要人工查看，本工具不做 OCR。截图、转存或重编码可能丢失来源信息，未命中不能证明图片不是 AI 生成。
+
+**SynthID 验证**：本工具不解码 SynthID，压缩文件字节统计和频域异常不能确认或排除水印。[Google 已在 Gemini 提供官方图片验证功能](https://blog.google/innovation-and-ai/products/ai-image-verification-gemini-app/)。如需使用，须自行向 Google 上传图片；本工具不会代为上传，也不会将该服务的结果当作本地检测结果。像素扰动功能未验证对专用水印的去除效果。
+
+**来源类型**：依据 [IPTC 词表](https://cv.iptc.org/newscodes/digitalsourcetype/)，只有 `trainedAlgorithmicMedia` 与 `compositeWithTrainedAlgorithmicMedia` 明确表示生成式 AI。普通算法绘图、数据可视化、计算摄影和算法增强不自动构成 AI 生成证据。
 
 **证据分级**：经过验证的 C2PA 清单中的 AI 来源类型是强证据；生成工具字段是可编辑的中等证据；文件字节中的工具名称只是弱线索。描述文字提到 AI 工具不代表该工具生成了图片。工具也不能仅凭 `SynthID` 字样解码 Google 的像素水印。
 

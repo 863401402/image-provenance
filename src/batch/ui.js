@@ -220,9 +220,11 @@ export function initBatchUi(options = {}) {
         }
         const report = record.result.report;
         const c2pa = report.c2pa.verified ? ` · C2PA ${report.c2pa.state || report.c2pa.status}` : '';
+        const aigc = report.aigc?.status && report.aigc.status !== 'absent'
+            ? ` · ${t('det.aigc.' + (report.aigc.status === 'present' ? report.aigc.declaration : report.aigc.status))}` : '';
         const score = report.frequency?.applicable && report.frequency.score != null
             ? ` · ${t('batch.score', { score: report.frequency.score })}` : '';
-        return `<span class="batch-result-main">${escHtml(verdictLabel(report.verdict))}</span><span class="batch-result-sub">${escHtml(c2pa + score)}</span>`;
+        return `<span class="batch-result-main">${escHtml(verdictLabel(report.verdict))}</span><span class="batch-result-sub">${escHtml(c2pa + aigc + score)}</span>`;
     }
 
     function rowActions(record) {

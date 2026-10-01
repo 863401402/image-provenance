@@ -3,6 +3,8 @@
 // no node_modules, and the pure-function parts of this module stay
 // import-graph-pure for offline smoke tests.
 
+import { SOURCE_TYPES, isAiSourceType } from './source-types.js';
+
 const EXIFR_URL = 'https://cdn.jsdelivr.net/npm/exifr@7.1.3/dist/full.esm.mjs';
 let _exifrPromise = null;
 function loadExifr() {
@@ -29,23 +31,15 @@ export async function parseMetadata(uint8) {
 // C2PA labels and DigitalSourceType values in the surrounding ASCII window.
 const JMAGIC = [0x6A, 0x75, 0x6D, 0x62]; // "jumb"
 const C2PA_LABELS = ['c2pa', 'c2pa.claim', 'c2pa.assertions', 'c2pa.signature', 'c2pa.hash'];
-const AI_SOURCE_TYPES = [
-    'trainedAlgorithmicMedia',
-    'compositeWithTrainedAlgorithmicMedia',
-    'algorithmicMedia',
-    'dataDrivenMedia',
-];
-const NON_AI_SOURCE_TYPES = ['digitalCapture', 'digitalCreation', 'composite'];
 
 // Captions, camera brands and authors can mention AI tools without identifying
 // the generator. Only tool/source-type fields provide generation evidence.
 export function getAiGenerationHints(meta = {}) {
-    const tools = /\b(?:Gemini|Imagen|SynthID|Midjourney|Stable[\s_-]*Diffusion|ComfyUI|DALL(?:[\s·_-]*E)?|OpenAI|Firefly|Flux|InvokeAI|Fooocus|Automatic1111|A1111|gpt-image(?:-\d+)?)\b/i;
+    const tools = /\b(?:Gemini|Imagen|SynthID|Midjourney|Stable[\s_-]*Diffusion|ComfyUI|DALL(?:[\s·_-]*E)?|OpenAI|ChatGPT|Firefly|Flux|InvokeAI|Fooocus|Automatic1111|A1111|gpt-image(?:-\d+)?|Seedream|Doubao|Jimeng|Nano[\s_-]*Banana|Qwen[\s_-]*Image|Hunyuan[\s_-]*Image)\b|豆包|即梦/i;
     return getGenerationHints(meta).filter(({ label, value }) => {
         if (label === 'Software' || label === 'CreatorTool') return tools.test(value);
         if (label === 'DigitalSourceType' || label === 'digitalSourceType') {
-            const type = value.split(/[\/#]/).pop();
-            return AI_SOURCE_TYPES.includes(type);
+            return isAiSourceType(value);
         }
         return false;
     });
@@ -70,9 +64,9 @@ export function sniffJumbf(uint8) {
         txt += String.fromCharCode.apply(null, uint8.subarray(i, Math.min(e, i + 65536)));
     }
     for (const lbl of C2PA_LABELS) if (txt.indexOf(lbl) !== -1) out.labels.push(lbl);
-    for (const v of AI_SOURCE_TYPES) if (txt.indexOf(v) !== -1) { out.digitalSourceType = v; break; }
-    if (!out.digitalSourceType) {
-        for (const v of NON_AI_SOURCE_TYPES) if (txt.indexOf(v) !== -1) { out.digitalSourceType = v; break; }
+    // Prefer longer names so compositeWithTrainedAlgorithmicMedia stays distinct.
+    for (const v of [...SOURCE_TYPES].sort((a, b) => b.length - a.length)) {
+        if (txt.includes(v)) { out.digitalSourceType = v; break; }
     }
     return out;
 }

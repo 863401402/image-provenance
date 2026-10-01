@@ -25,7 +25,7 @@ function statusCodes(items) {
 }
 
 export function createAnalysisReport({
-    file, hash, dimensions, detections, meta, jumbf, frequency, mode,
+    file, hash, dimensions, detections, meta, jumbf, aigc, frequency, mode,
 }) {
     const score = frequency?.score ?? null;
     const verdict = classifyEvidence(detections, score);
@@ -43,6 +43,7 @@ export function createAnalysisReport({
         },
         mode,
         verdict: verdict.kind,
+        aigc: aigc || { status: 'absent', declaration: null, confidence: null, verified: false, labels: [], warnings: [] },
         c2pa: {
             present: Boolean(jumbf?.present || verification.present),
             status: verification.status || (jumbf?.present ? 'structure' : 'absent'),
@@ -74,6 +75,7 @@ export function createAnalysisReport({
         warnings: [
             meta?._error ? `metadata: ${meta._error}` : null,
             verification.error ? `c2pa: ${verification.error}` : null,
+            ...(aigc?.warnings || []).map(warning => `aigc: ${warning}`),
         ].filter(Boolean),
     };
 }
@@ -102,7 +104,7 @@ export async function analyzeImage(file, options = {}) {
     throwIfAborted(signal);
 
     onProgress({ stage: 'provenance', pct: 18 });
-    const { detections, meta, jumbf } = await runAllDetections(bytes, {
+    const { detections, meta, jumbf, aigc } = await runAllDetections(bytes, {
         mime,
     });
     throwIfAborted(signal);
@@ -123,7 +125,7 @@ export async function analyzeImage(file, options = {}) {
     onProgress({ stage: 'complete', pct: 100 });
     const report = createAnalysisReport({
         file: { name: file.name, type: mime, size: file.size },
-        hash, dimensions, detections, meta, jumbf, frequency, mode,
+        hash, dimensions, detections, meta, jumbf, aigc, frequency, mode,
     });
-    return { report, details: { detections, meta, jumbf, frequency } };
+    return { report, details: { detections, meta, jumbf, aigc, frequency } };
 }

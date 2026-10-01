@@ -71,6 +71,30 @@ ES Modules + Web Workers require HTTP — `file://` will not load.
 
 Open a [GitHub Issue](https://github.com/863401402/image-provenance/issues) for bug reports / feature requests, or start a [Discussion](https://github.com/863401402/image-provenance/discussions) for broader questions.
 
+## Detection updates (2026-10-02)
+
+Chinese AIGC declarations are read from JPEG / PNG / WebP TC260 XMP and PNG
+text chunks. Producer / propagator fields and identifiers are included in
+cards and CSV / JSON reports. Label `"1"` is editable medium evidence; `"2"`
+(possible), `"3"` (suspected) and conflicting records remain weak. Missing or
+malformed labels do not establish origin. See [supported storage and bounds](docs/AIGC-METADATA.md).
+
+Generator metadata and weak byte clues now include Seedream / Doubao / Jimeng,
+Qwen-Image / HunyuanImage and Nano Banana. These are editable tool-name clues,
+not model classifiers or proprietary watermark decoders. Compressed-file byte
+statistics are informational and do not contribute to the AI verdict.
+
+The [IPTC vocabulary](https://cv.iptc.org/newscodes/digitalsourcetype/) explicitly
+identifies generative AI only through `trainedAlgorithmicMedia` and
+`compositeWithTrainedAlgorithmicMedia`. Algorithmic art, data visualization,
+computational photography and sharpening do not automatically imply generative AI.
+Ingredient source types are not attributed to the active C2PA image.
+
+This tool does not decode SynthID or verify proprietary watermark removal.
+[Google offers image verification in Gemini](https://blog.google/innovation-and-ai/products/ai-image-verification-gemini-app/).
+Using that service requires separately uploading an image to Google; this app
+does not upload images or import external verification results.
+
 ## License
 
 [MIT](LICENSE)

@@ -52,3 +52,30 @@ test('verified manifest requires its own explicit AI source type', () => {
     assert.equal(summary.digitalSourceType, null);
     assert.equal(hasVerifiedAiSource(summary), false);
 });
+
+test('current image tools are recognized only in generation fields', () => {
+    for (const tool of ['Seedream 4.0', 'Doubao', '豆包', '即梦', 'ChatGPT',
+        'Nano Banana Pro', 'Qwen-Image', 'HunyuanImage 3.0', 'gpt-image-2']) {
+        assert.equal(getAiGenerationHints({ Software: tool }).length, 1, tool);
+        assert.deepEqual(getAiGenerationHints({ Description: tool }), [], tool);
+    }
+});
+
+test('non-generative IPTC types never declare AI provenance', () => {
+    for (const type of ['algorithmicMedia', 'dataDrivenMedia', 'computationalCapture',
+        'screenCapture', 'algorithmicallyEnhanced', 'humanEdits', 'composite']) {
+        assert.deepEqual(getAiGenerationHints({ DigitalSourceType: type }), [], type);
+        assert.equal(hasVerifiedAiSource({ verified: true, digitalSourceType: type }), false, type);
+    }
+});
+
+test('Chinese byte markers remain weak and compressed byte statistics are informational', async () => {
+    const bytes = new Uint8Array(4096);
+    bytes.set(new TextEncoder().encode('豆包 即梦'));
+    const { detections } = await runAllDetections(bytes);
+    assert.equal(detections.find(item => item.title.startsWith('ByteDance')).confidence, 'weak');
+    const stats = detections.at(-1);
+    assert.equal(stats.hit, false);
+    assert.equal(stats.confidence, 'info');
+    assert.equal(classifyEvidence([stats], null).kind, 'none');
+});

@@ -1,11 +1,5 @@
-const AI_SOURCE_TYPES = [
-    'trainedAlgorithmicMedia',
-    'compositeWithTrainedAlgorithmicMedia',
-    'algorithmicMedia',
-    'dataDrivenMedia',
-];
-
-const SOURCE_TYPES = [...AI_SOURCE_TYPES, 'digitalCapture', 'digitalCreation', 'composite'];
+import { normalizeSourceType, isAiSourceType } from './source-types.js';
+export { isAiSourceType } from './source-types.js';
 let sdkPromise = null;
 
 function loadSdk() {
@@ -30,15 +24,18 @@ function findSourceType(value, seen = new Set(), depth = 0) {
     if (depth > 12 || value == null) return null;
     if (typeof value !== 'object' || seen.has(value)) return null;
     seen.add(value);
+    // An ingredient describes an input asset, not the active image's source type.
+    if (typeof value.label === 'string' && /^c2pa\.ingredient(?:\.|$)/.test(value.label)) return null;
 
     for (const [key, child] of Object.entries(value)) {
         const normalizedKey = key.replace(/[^a-z]/gi, '').toLowerCase();
         if (normalizedKey === 'digitalsourcetype' && typeof child === 'string') {
-            const found = SOURCE_TYPES.find(type => child.split(/[\/#]/).pop() === type);
+            const found = normalizeSourceType(child);
             if (found) return found;
         }
     }
-    for (const child of Object.values(value)) {
+    for (const [key, child] of Object.entries(value)) {
+        if (key === 'ingredients') continue;
         const found = findSourceType(child, seen, depth + 1);
         if (found) return found;
     }
@@ -81,10 +78,6 @@ export function summarizeValidationStore(store = {}, manifest = null) {
         title: manifest?.title || null,
         digitalSourceType: findSourceType(manifest),
     };
-}
-
-export function isAiSourceType(value) {
-    return AI_SOURCE_TYPES.includes(value);
 }
 
 export function hasVerifiedAiSource(verification = {}) {

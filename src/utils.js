@@ -85,7 +85,7 @@ export function getImageDims(file) {
 }
 
 export function escHtml(s) {
-    const d = document.createElement('div');
-    d.textContent = s == null ? '' : String(s);
-    return d.innerHTML;
+    // Also escape quotes: callers interpolate this output into HTML attributes.
+    const entities = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+    return String(s ?? '').replace(/[&<>"']/g, character => entities[character]);
 }
